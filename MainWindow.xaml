@@ -5,12 +5,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WlanRouter"
         mc:Ignorable="d"
-        Title="Wlan Router 1.0" Height="150" Width="250" ResizeMode="NoResize" Closing="Window_Closing">
+        Title="Wlan Router (1.10)" Height="175" Width="300" ResizeMode="CanMinimize" Closing="Window_Closing" WindowStartupLocation="CenterScreen">
     <Grid>
-        <Button x:Name="Starten_btn" Content="Starten" Margin="10,10,10,67" Click="Starten_Klick"/>
-        <TextBlock x:Name="SSID_txt" HorizontalAlignment="Left" TextWrapping="Wrap" Text="SSID" VerticalAlignment="Bottom" Margin="10,0,0,45"/>
-        <TextBlock x:Name="WPA_PSK_txt" HorizontalAlignment="Left" TextWrapping="Wrap" Text="WPA PSK" Margin="10,0,0,16" Height="16" VerticalAlignment="Bottom"/>
-        <TextBox x:Name="SSID" Height="23" TextWrapping="Wrap" Text="Wlan" VerticalAlignment="Bottom" Margin="62,0,10,39"/>
-        <TextBox x:Name="WPA_PSK" TextWrapping="Wrap" Text="Passwort" Margin="62,0,10,10" Height="23" VerticalAlignment="Bottom"/>
+        <Button x:Name="control_btn" Content="Starten" Margin="10,10,10,94" Click="control_btn_Klick"/>
+        <ComboBox x:Name="Inet_share_com"  VerticalAlignment="Bottom" Height="23" Margin="10,0,10,66" SelectedValuePath="Content"/>
+        <TextBox x:Name="SSID_tbox" VerticalAlignment="Bottom" Height="23" Margin="10,0,10,38" TextWrapping="NoWrap"/>
+        <PasswordBox x:Name="key_pbox" VerticalAlignment="Bottom" Margin="10,0,43,10" Height="23"/>
+        <TextBox x:Name="key_tbox" VerticalAlignment="Bottom" Margin="10,0,43,10" Height="23" Visibility="Collapsed"/>
+        <Button x:Name="key_b" VerticalAlignment="Bottom" Margin="0,0,10,10" Height="23" HorizontalAlignment="Right" Width="28" Content="abc"/>
     </Grid>
 </Window>

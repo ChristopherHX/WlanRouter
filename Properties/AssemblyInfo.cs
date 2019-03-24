@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using System.Resources;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows;
 
@@ -8,11 +7,11 @@ using System.Windows;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("WlanRouter")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Erstellt ein virtuellen Wlan Router mit Internetfreigabe")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("WlanRouter")]
-[assembly: AssemblyCopyright("Copyright ©  2015")]
+[assembly: AssemblyCopyright("Copyright ©  2015 Christopher Homberger")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
