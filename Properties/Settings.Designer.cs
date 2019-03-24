@@ -26,24 +26,24 @@ namespace WlanRouter.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string SSID {
+        public string Name {
             get {
-                return ((string)(this["SSID"]));
+                return ((string)(this["Name"]));
             }
             set {
-                this["SSID"] = value;
+                this["Name"] = value;
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string Passwort {
+        public string Password {
             get {
-                return ((string)(this["Passwort"]));
+                return ((string)(this["Password"]));
             }
             set {
-                this["Passwort"] = value;
+                this["Password"] = value;
             }
         }
     }

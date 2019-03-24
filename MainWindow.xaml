@@ -5,13 +5,15 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WlanRouter"
         mc:Ignorable="d"
-        Title="Wlan Router (1.10)" Height="175" Width="300" ResizeMode="CanMinimize" Closing="Window_Closing" WindowStartupLocation="CenterScreen">
+        Title="Wlan Router" Height="200" Width="350" ResizeMode="CanMinimize" Closing="Window_Closing">
     <Grid>
-        <Button x:Name="control_btn" Content="Starten" Margin="10,10,10,94" Click="control_btn_Klick"/>
-        <ComboBox x:Name="Inet_share_com"  VerticalAlignment="Bottom" Height="23" Margin="10,0,10,66" SelectedValuePath="Content"/>
-        <TextBox x:Name="SSID_tbox" VerticalAlignment="Bottom" Height="23" Margin="10,0,10,38" TextWrapping="NoWrap"/>
-        <PasswordBox x:Name="key_pbox" VerticalAlignment="Bottom" Margin="10,0,43,10" Height="23"/>
-        <TextBox x:Name="key_tbox" VerticalAlignment="Bottom" Margin="10,0,43,10" Height="23" Visibility="Collapsed"/>
-        <Button x:Name="key_b" VerticalAlignment="Bottom" Margin="0,0,10,10" Height="23" HorizontalAlignment="Right" Width="28" Content="abc"/>
+        <Button x:Name="Steuer_Taste" Content="Wlan Router starten" Margin="5,5,5,95" FontSize="29.333"/>
+        <ComboBox x:Name="Internet_Freigabe_Auswahlbox" SelectedValuePath="Content" SelectedIndex="0" VerticalAlignment="Bottom" Height="25" Margin="5,0,5,65" FontSize="14.667">
+            <ComboBoxItem Content="Keine Internetfreigabe" />
+        </ComboBox>
+        <TextBox x:Name="Name_Textbox" TextWrapping="NoWrap" FontSize="16" VerticalAlignment="Bottom" Height="25" Margin="5,0,5,35" MaxLines="1" IsUndoEnabled="False"/>
+        <PasswordBox x:Name="Passwort_Pbox" FontSize="16" VerticalAlignment="Bottom" Height="25" Margin="5,0,38,5"/>
+        <TextBox x:Name="Passwort_Tbox" Visibility="Collapsed" FontSize="16" VerticalAlignment="Bottom" Height="25" Margin="5,0,38,5"/>
+        <Button x:Name="Passwort_STaste" VerticalAlignment="Bottom" Margin="0,0,5,5" Height="25" HorizontalAlignment="Right" Width="28" Content="abc"/>
     </Grid>
 </Window>
