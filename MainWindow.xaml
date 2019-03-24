@@ -13,5 +13,7 @@
         <PasswordBox x:Name="Passwort_Pbox" FontSize="16" VerticalAlignment="Bottom" Height="25" Margin="5,0,38,5"/>
         <TextBox x:Name="Passwort_Tbox" Visibility="Collapsed" FontSize="16" VerticalAlignment="Bottom" Height="25" Margin="5,0,38,5"/>
         <Button x:Name="Passwort_STaste" VerticalAlignment="Bottom" Margin="0,0,5,5" Height="25" HorizontalAlignment="Right" Width="28" Content="abc"/>
+        <!-- <TextBox x:Name="RouterIP" TextWrapping="NoWrap" FontSize="16" VerticalAlignment="Bottom" Height="25" Margin="5,0,5,35" MaxLines="1" IsUndoEnabled="False"/> -->
+
     </Grid>
 </Window>

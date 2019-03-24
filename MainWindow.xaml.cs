@@ -11,6 +11,8 @@ namespace WlanRouter
 {
     public partial class MainWindow : Window
     {
+        NativeWiFi wiFi;
+        WiFiDirect wiFi2;
         Netzwerkshell netsh;
         bool Steuer_Taste_state = true;
         private static readonly INetSharingManager SharingManager = new NetSharingManager();
@@ -18,7 +20,14 @@ namespace WlanRouter
         public MainWindow()
         {
             InitializeComponent();
-            netsh = new Netzwerkshell();
+            try {
+                // wiFi = new NativeWiFi();
+                wiFi2 = new WiFiDirect();
+                // wiFi.SSID = "M300";
+                // netsh = new Netzwerkshell();
+            } catch (Exception ex) {
+                MessageBox.Show(ex.ToString() + Environment.NewLine + "No WiFiDirect support use latest release", "Failed", MessageBoxButton.OK);
+            }
             Steuer_Taste.Click += (sender, e) => Steuer_Taste_Klick();
             Name_Textbox.TextChanged += (sender, e) => Eingabe_changed();
             Passwort_Pbox.PasswordChanged += (sender, e) => Eingabe_changed();
@@ -31,8 +40,8 @@ namespace WlanRouter
         {
             try
             {
-                Name_Textbox.Text = netsh.get_ssid();
-                Passwort_Pbox.Password = netsh.get_password();
+                // Name_Textbox.Text = netsh.get_ssid();
+                // Passwort_Pbox.Password = netsh.get_password();
                 var cons = (from INetConnection c in SharingManager.EnumEveryConnection
                             where SharingManager.NetConnectionProps[c].Status == tagNETCON_STATUS.NCS_CONNECTED
                             select c).ToArray();
@@ -86,8 +95,14 @@ namespace WlanRouter
                     case true:
                         try
                         {
-                            netsh.set_hostednetwork(Name_Textbox.Text, Passwort_Pbox.Password);
-                            netsh.start_hostednetwork();
+                            wiFi2.SetSSID(Name_Textbox.Text);
+                            wiFi2.SetPassword(Passwort_Pbox.Password);
+                            wiFi2.Start();
+                            // wiFi.InitializeSettings();
+                            // wiFi.Allow();
+                            // wiFi.StartHostedNetwork();
+                            // netsh.set_hostednetwork(Name_Textbox.Text, Passwort_Pbox.Password);
+                            // netsh.start_hostednetwork();
                             INetConnection Router = (from INetConnection con in SharingManager.EnumEveryConnection
                                                      where SharingManager.NetConnectionProps[con].Status == tagNETCON_STATUS.NCS_CONNECTED
                                                      where SharingManager.NetConnectionProps[con].DeviceName.StartsWith("Microsoft ")
@@ -164,9 +179,9 @@ namespace WlanRouter
                             control_btn_change(1, true);
                             break;
                         }
-                        catch
+                        catch(Exception ex)
                         {
-                            MessageBox.Show("Failed to start hostednetwork probably missing driver support", "Error", MessageBoxButton.OK);
+                            MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK);
                             control_btn_change(2, true);
                         }
                         refresh();
@@ -174,7 +189,8 @@ namespace WlanRouter
                     case false:
                         try
                         {
-                            netsh.stop_hostednetwork();
+                            wiFi2.Stop();
+                            // netsh.stop_hostednetwork();
                             refresh();
                             control_btn_change(2, true);
                         }
@@ -273,8 +289,8 @@ namespace WlanRouter
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            if (Steuer_Taste.IsEnabled)
-                netsh.set_hostednetwork(Name_Textbox.Text, Passwort_Pbox.Visibility == Visibility.Visible ? Passwort_Pbox.Password : Passwort_Tbox.Text);
+            // if (Steuer_Taste.IsEnabled)
+            //     netsh.set_hostednetwork(Name_Textbox.Text, Passwort_Pbox.Visibility == Visibility.Visible ? Passwort_Pbox.Password : Passwort_Tbox.Text);
         }
     }
 }
