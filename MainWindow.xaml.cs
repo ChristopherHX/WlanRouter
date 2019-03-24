@@ -1,9 +1,6 @@
 ﻿using NETCONLib;
 using System;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -14,76 +11,93 @@ namespace WlanRouter
 {
     public partial class MainWindow : Window
     {
-        string cmd_tmp;
+        Netzwerkshell netsh;
         bool Steuer_Taste_state = true;
         private static readonly INetSharingManager SharingManager = new NetSharingManager();
 
         public MainWindow()
         {
             InitializeComponent();
-            Name_Textbox.Text = Properties.Settings.Default.Name;
-            Passwort_Pbox.Password = Properties.Settings.Default.Password;
+            netsh = new Netzwerkshell();
             Steuer_Taste.Click += (sender, e) => Steuer_Taste_Klick();
             Name_Textbox.TextChanged += (sender, e) => Eingabe_changed();
             Passwort_Pbox.PasswordChanged += (sender, e) => Eingabe_changed();
             Passwort_Tbox.TextChanged += (sender, e) => Eingabe_changed();
             Passwort_STaste.Click += (sender, e) => Passwort_STaste_Klick();
-            try 
+            refresh();
+        }
+
+        private void refresh()
+        {
+            try
             {
+                Name_Textbox.Text = netsh.get_ssid();
+                Passwort_Pbox.Password = netsh.get_password();
                 var cons = (from INetConnection c in SharingManager.EnumEveryConnection
                             where SharingManager.NetConnectionProps[c].Status == tagNETCON_STATUS.NCS_CONNECTED
                             select c).ToArray();
+                Internet_Freigabe_Auswahlbox.Items.Clear();
+                Internet_Freigabe_Auswahlbox.Items.Add(new ComboBoxItem { Content = "Keine Internetfreigabe" });
+                Internet_Freigabe_Auswahlbox.SelectedIndex = 0;
                 if (cons.Length != 0)
                 {
                     foreach (var con in cons)
                     {
                         if (SharingManager.NetConnectionProps[con].DeviceName.StartsWith("Microsoft "))
-                        control_btn_change(1, false);
-                    else
-                    {
+                        {
                             string con_name = SharingManager.NetConnectionProps[con].Name + System.Environment.NewLine + SharingManager.NetConnectionProps[con].DeviceName;
                             Internet_Freigabe_Auswahlbox.Items.Add(new ComboBoxItem { Content = con_name });
-                            if (SharingManager.INetSharingConfigurationForINetConnection[con].SharingEnabled)
+                            control_btn_change(1, false);
+                        }
+                        else
+                        {
+                            string con_name = SharingManager.NetConnectionProps[con].Name + System.Environment.NewLine + SharingManager.NetConnectionProps[con].DeviceName;
+                            Internet_Freigabe_Auswahlbox.Items.Add(new ComboBoxItem { Content = con_name });
+                            if (SharingManager.INetSharingConfigurationForINetConnection[con].SharingEnabled && SharingManager.INetSharingConfigurationForINetConnection[con].SharingConnectionType == tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC)
                                 Internet_Freigabe_Auswahlbox.SelectedValue = con_name;
+                        }
                     }
-                }
                 }
             } catch (Exception ex) {
                 MessageBox.Show(ex.Message + Environment.NewLine + ex.StackTrace, "Exception", MessageBoxButton.OK);
             }
-            Eingabe_changed();
+        }
+
+        private void Remove_ICS()
+        {
+            INetConnection[] cons = (from INetConnection c in SharingManager.EnumEveryConnection
+                                     where SharingManager.get_INetSharingConfigurationForINetConnection(c).SharingEnabled
+                                     select c).ToArray();
+            if (cons.Length == 0)
+                return;
+            foreach (var con in cons)
+            {
+                SharingManager.get_INetSharingConfigurationForINetConnection(con).DisableSharing();
+            }
         }
 
         private void Steuer_Taste_Klick()
         {
             control_btn_change(0, true);
-            int d_z;
-            DispatcherTimer d_timer;
-            string Freigabe = null, Router = null, command;
-            switch (Steuer_Taste_state)
+            Dispatcher.InvokeAsync(() =>
             {
-                case true:
-                    command = "cmd /c netsh wlan set hostednetwork mode=allow ssid=\"\"" + Name_Textbox.Text + "\"\" key=\"\"" + Passwort_Pbox.Password + "\"\" & netsh wlan start hostednetwork";
-                    cmd(command);
-                    d_timer = new DispatcherTimer(DispatcherPriority.Background);
-                    d_timer.Interval = TimeSpan.FromSeconds(0.1);
-                    d_z = 0;
-                    d_timer.Tick += (x, y) =>
-                    {
+                switch (Steuer_Taste_state)
+                {
+                    case true:
                         try
                         {
-                            d_timer.Stop();
-                            string[] test = (from INetConnection con in SharingManager.EnumEveryConnection
-                                            where SharingManager.NetConnectionProps[con].Status == tagNETCON_STATUS.NCS_CONNECTED
-                                            where SharingManager.NetConnectionProps[con].DeviceName.StartsWith("Microsoft ")
-                                            select SharingManager.NetConnectionProps[con].Name).ToArray();
-                            if (test.Length != 0)
+                            netsh.set_hostednetwork(Name_Textbox.Text, Passwort_Pbox.Password);
+                            netsh.start_hostednetwork();
+                            INetConnection Router = (from INetConnection con in SharingManager.EnumEveryConnection
+                                                     where SharingManager.NetConnectionProps[con].Status == tagNETCON_STATUS.NCS_CONNECTED
+                                                     where SharingManager.NetConnectionProps[con].DeviceName.StartsWith("Microsoft ")
+                                                     select con).ToArray().First();
+                            bool isrightstate = SharingManager.INetSharingConfigurationForINetConnection[Router].SharingEnabled && SharingManager.INetSharingConfigurationForINetConnection[Router].SharingConnectionType == tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PRIVATE;
+                            if (Internet_Freigabe_Auswahlbox.SelectedIndex != 0 && !isrightstate)
                             {
-                                cmd("del tmp");
-                                Router = test.First();
-                                if (Internet_Freigabe_Auswahlbox.SelectedIndex != 0)
+                                INetConnection Freigabe = (from INetConnection con in SharingManager.EnumEveryConnection where SharingManager.get_NetConnectionProps(con).DeviceName == Internet_Freigabe_Auswahlbox.SelectedValue.ToString().Split(Environment.NewLine.ToArray(), StringSplitOptions.None).Last() select con).First();
+                                if (!(SharingManager.INetSharingConfigurationForINetConnection[Freigabe].SharingEnabled && SharingManager.INetSharingConfigurationForINetConnection[Freigabe].SharingConnectionType == tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC))
                                 {
-                                    Freigabe = Internet_Freigabe_Auswahlbox.SelectedValue.ToString().Split(Environment.NewLine.ToArray(), StringSplitOptions.None).First();
                                     while (true)
                                     {
                                         try
@@ -93,20 +107,9 @@ namespace WlanRouter
                                         }
                                         catch
                                         {
-                                            if (MessageBox.Show("Entfernen von der Internetfreigabe fehlgeschlagen" + System.Environment.NewLine + "Erneut Versuchen?", "Fehler", MessageBoxButton.OKCancel) != MessageBoxResult.OK)
-                                                throw new Exception("Fehler"); ;
-                                        }
-                                    }
-                                    while (true)
-                                    {
-                                        try
-                                        {
-                                            SharingManager.get_INetSharingConfigurationForINetConnection((from INetConnection c in SharingManager.EnumEveryConnection where SharingManager.get_NetConnectionProps(c).Name == Freigabe select c).First()).EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC);
-                                            break;
-                                        }
-                                        catch
-                                        {
-                                            if (MessageBox.Show("Erstellen von der Internetfreigabe fehlgeschlagen (Freigabe Netzwerk)" + System.Environment.NewLine + "Erneut Versuchen?", "Fehler", MessageBoxButton.OKCancel) != MessageBoxResult.OK)
+                                            if (MessageBox.Show("Entfernen von der Internetfreigabe fehlgeschlagen" + System.Environment.NewLine + "Erneut Versuchen?", "Fehler", MessageBoxButton.OKCancel) == MessageBoxResult.OK)
+                                                continue;
+                                            else
                                                 throw new Exception("Fehler");
                                         }
                                     }
@@ -114,95 +117,75 @@ namespace WlanRouter
                                     {
                                         try
                                         {
-                                            SharingManager.get_INetSharingConfigurationForINetConnection((from INetConnection c in SharingManager.EnumEveryConnection where SharingManager.get_NetConnectionProps(c).Name == Router select c).First()).EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PRIVATE);
+                                            SharingManager.get_INetSharingConfigurationForINetConnection(Freigabe).EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC);
                                             break;
                                         }
                                         catch
                                         {
-
-                                            if (MessageBox.Show("Erstellen von der Internetfreigabe fehlgeschlagen (Einrichtung Router)" + System.Environment.NewLine + "Erneut Versuchen?", "Fehler", MessageBoxButton.OKCancel) != MessageBoxResult.OK)
+                                            if (MessageBox.Show("Erstellen von der Internetfreigabe fehlgeschlagen (Freigabe Netzwerk)" + System.Environment.NewLine + "Erneut Versuchen?", "Fehler", MessageBoxButton.OKCancel) == MessageBoxResult.OK)
+                                                continue;
+                                            else
+                                                throw new Exception("Fehler");
+                                        }
+                                    }
+                                    while (true)
+                                    {
+                                        try
+                                        {
+                                            SharingManager.get_INetSharingConfigurationForINetConnection(Router).EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PRIVATE);
+                                            break;
+                                        }
+                                        catch
+                                        {
+                                            if (MessageBox.Show("Erstellen von der Internetfreigabe fehlgeschlagen (Einrichtung Router)" + System.Environment.NewLine + "Erneut Versuchen?", "Fehler", MessageBoxButton.OKCancel) == MessageBoxResult.OK)
+                                                continue;
+                                            else
                                                 throw new Exception("Fehler");
                                         }
                                     }
                                 }
-                                control_btn_change(1, true);
                             }
-                            else if (d_z >= 20)
-                            {
-                                if (MessageBox.Show("Starten des Routers fehlgeschlagen" + System.Environment.NewLine + "Erneut Versuchen?", "Fehler", MessageBoxButton.OKCancel) != MessageBoxResult.OK)
+                            else if (Internet_Freigabe_Auswahlbox.SelectedIndex == 0 && isrightstate)
+                                while (true)
                                 {
-                                    throw new Exception("Fehler");
+                                    try
+                                    {
+                                        Remove_ICS();
+                                        break;
+                                    }
+                                    catch
+                                    {
+                                        if (MessageBox.Show("Entfernen von der Internetfreigabe fehlgeschlagen" + System.Environment.NewLine + "Erneut Versuchen?", "Fehler", MessageBoxButton.OKCancel) == MessageBoxResult.OK)
+                                            continue;
+                                        else
+                                            throw new Exception("Fehler");
+                                    }
                                 }
-                                d_z = 0;
-                                cmd(command);
-                                d_timer.Start();
-                            }
-                            else
-                            {
-                                d_z++;
-                                d_timer.Start();
-                            }
+                            control_btn_change(1, true);
+                            break;
                         }
                         catch
                         {
-                            cmd("del tmp");
+                            MessageBox.Show("Failed to start hostednetwork probably missing driver support", "Error", MessageBoxButton.OK);
                             control_btn_change(2, true);
                         }
-                    };
-                    d_timer.Start();
-                    break;
-                case false:
-                    command = "netsh wlan stop hostednetwork";
-                    cmd(command);
-                    d_timer = new DispatcherTimer(DispatcherPriority.Background);
-                    d_timer.Interval = TimeSpan.FromSeconds(0.1);
-                    d_z = 0;
-                    d_timer.Tick += (x, y) =>
-                    {
+                        refresh();
+                        break;
+                    case false:
                         try
                         {
-                            d_timer.Stop();
-                            string[] test = (from INetConnection con in SharingManager.EnumEveryConnection
-                                            where SharingManager.NetConnectionProps[con].Status == tagNETCON_STATUS.NCS_CONNECTED
-                                            where SharingManager.NetConnectionProps[con].DeviceName.StartsWith("Microsoft ")
-                                            select SharingManager.NetConnectionProps[con].Name).ToArray();
-
-                            if (test.Length == 0)
-                            {
-                                cmd("del tmp");
-                                control_btn_change(2, true);
-                            }
-                            else if (d_z >= 20)
-                            {
-                                if (MessageBox.Show("Stoppen des Routers fehlgeschlagen" + System.Environment.NewLine + "Erneut Versuchen?", "Fehler", MessageBoxButton.OKCancel) == MessageBoxResult.OK)
-                                {
-                                    d_z = 0;
-                                    cmd(command);
-                                    d_timer.Start();
-                                }
-                                else
-                                    throw new Exception("Fehler");
-                            }
-                            else
-                            {
-                                d_z++;
-                                d_timer.Start();
-                            }
+                            netsh.stop_hostednetwork();
+                            refresh();
+                            control_btn_change(2, true);
                         }
                         catch
                         {
-                            cmd("del tmp");
+                            MessageBox.Show("Failed to stop hostednetwork", "Error", MessageBoxButton.OK);
                             control_btn_change(1, true);
                         }
-                    };
-                    try {
-                        Remove_ICS();
-                    } catch {
-
-                    }
-                    d_timer.Start();
-                    break;
-            }
+                        break;
+                }
+            }, DispatcherPriority.Background);
         }
 
         private void control_btn_change(int state, bool mode)
@@ -241,7 +224,6 @@ namespace WlanRouter
                     }
                     break;
                 case 2:
-                    
                     Steuer_Taste_state = true;
                     Steuer_Taste.Content = "Wlan Router starten";
                     Name_Textbox.IsReadOnly = false;
@@ -252,10 +234,10 @@ namespace WlanRouter
                     Passwort_Tbox.IsEnabled = true;
                     Passwort_Pbox.IsEnabled = true;
                     Steuer_Taste.IsEnabled = true;
-                        Cursor = Cursors.Arrow;
+                    Cursor = Cursors.Arrow;
                     break;
-                    }
             }
+        }
 
         private void Eingabe_changed()
         {
@@ -289,44 +271,10 @@ namespace WlanRouter
             Eingabe_changed();
         }
 
-        private void cmd(string command)
-        {
-            switch (command)
-            {
-                case "del tmp":
-                    if (cmd_tmp != null)
-                    {
-                        File.Delete(cmd_tmp);
-                        cmd_tmp = null;
-                    }
-                    break;
-                default:
-                    cmd_tmp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString() + ".vbs");
-                    File.WriteAllText(cmd_tmp, "CreateObject(\"Wscript.Shell\").Run \"" + command + "\", 0, False", Encoding.ASCII);
-                    Process.Start("wscript", cmd_tmp);
-                    break;
-            }
-        }
-
-        private void Remove_ICS()
-        {
-            INetConnection[] cons = (from INetConnection c in SharingManager.EnumEveryConnection
-                                    where SharingManager.get_INetSharingConfigurationForINetConnection(c).SharingEnabled
-                                    select c).ToArray();
-            if (cons.Length != 0)
-            {
-                foreach (var con in cons)
-                {
-                    SharingManager.get_INetSharingConfigurationForINetConnection(con).DisableSharing();
-                }
-            }
-        }
-
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            Properties.Settings.Default.Name = Name_Textbox.Text;
-            Properties.Settings.Default.Password = (Passwort_Tbox.IsVisible) ? Passwort_Tbox.Text : Passwort_Pbox.Password;
-            Properties.Settings.Default.Save();
+            if (Steuer_Taste.IsEnabled)
+                netsh.set_hostednetwork(Name_Textbox.Text, Passwort_Pbox.Visibility == Visibility.Visible ? Passwort_Pbox.Password : Passwort_Tbox.Text);
         }
     }
 }

@@ -8,9 +8,7 @@
         Title="Wlan Router" Height="200" Width="350" ResizeMode="CanMinimize" Closing="Window_Closing">
     <Grid>
         <Button x:Name="Steuer_Taste" Content="Wlan Router starten" Margin="5,5,5,95" FontSize="29.333"/>
-        <ComboBox x:Name="Internet_Freigabe_Auswahlbox" SelectedValuePath="Content" SelectedIndex="0" VerticalAlignment="Bottom" Height="25" Margin="5,0,5,65" FontSize="14.667">
-            <ComboBoxItem Content="Keine Internetfreigabe" />
-        </ComboBox>
+        <ComboBox x:Name="Internet_Freigabe_Auswahlbox" SelectedValuePath="Content" SelectedIndex="0" VerticalAlignment="Bottom" Height="25" Margin="5,0,5,65" FontSize="14.667"/>
         <TextBox x:Name="Name_Textbox" TextWrapping="NoWrap" FontSize="16" VerticalAlignment="Bottom" Height="25" Margin="5,0,5,35" MaxLines="1" IsUndoEnabled="False"/>
         <PasswordBox x:Name="Passwort_Pbox" FontSize="16" VerticalAlignment="Bottom" Height="25" Margin="5,0,38,5"/>
         <TextBox x:Name="Passwort_Tbox" Visibility="Collapsed" FontSize="16" VerticalAlignment="Bottom" Height="25" Margin="5,0,38,5"/>
