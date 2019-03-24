@@ -5,6 +5,7 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{940851A1-F6C3-411F-BBBB-94C3E5F1ACE3}</ProjectGuid>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>WlanRouter</RootNamespace>
@@ -73,6 +74,8 @@
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <Reference Include="System.Runtime.WindowsRuntime" />
+    <Reference Include="C:\Program Files (x86)\Windows Kits\10\UnionMetadata\10.0.17134.0\Windows.winmd"/>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
@@ -93,6 +96,8 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="WiFiDirect.cs" />
+    <Compile Include="NativeWiFi.cs" />
     <Compile Include="Netzwerkshell.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
