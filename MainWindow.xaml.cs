@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using System.Runtime.InteropServices;
+using System.Management;
 
 namespace WlanRouter
 {
@@ -21,7 +22,7 @@ namespace WlanRouter
             InitializeComponent();
             try
             {
-                if (Environment.OSVersion.Version.Major > 6 || Environment.OSVersion.Version.Minor > 1)
+                if (Environment.OSVersion.Version.Major >= 6 && Environment.OSVersion.Version.Minor > 1)
                 {
                     router = new WiFiDirect();
                 }
@@ -93,6 +94,26 @@ namespace WlanRouter
             }
         }
 
+        public static void CleanupWMISharingEntries()
+        {
+            var scope = new ManagementScope("root\\Microsoft\\HomeNet");
+            scope.Connect();
+
+            var options = new PutOptions();
+            options.Type = PutType.UpdateOnly;
+
+            var query = new ObjectQuery("SELECT * FROM HNet_ConnectionProperties");
+            var srchr = new ManagementObjectSearcher(scope, query);
+            foreach (ManagementObject entry in srchr.Get())
+            {
+                if ((bool)entry["IsIcsPrivate"])
+                    entry["IsIcsPrivate"] = false;
+                if ((bool)entry["IsIcsPublic"])
+                    entry["IsIcsPublic"] = false;
+                entry.Put(options);
+            }
+        }
+
         private void Steuer_Taste_Klick()
         {
             control_btn_change(0, true);
@@ -126,12 +147,14 @@ namespace WlanRouter
                             }
                             if(Internet_Freigabe_Auswahlbox.SelectedIndex != 0)
                             {
+                                CleanupWMISharingEntries();
                                 INetConnection Freigabe = (from INetConnection con in SharingManager.EnumEveryConnection where SharingManager.get_NetConnectionProps(con).DeviceName == Internet_Freigabe_Auswahlbox.SelectedValue.ToString().Split(Environment.NewLine.ToArray(), StringSplitOptions.None).Last() select con).First();                            
                                 while (true)
                                 {
                                     try
                                     {
-                                        SharingManager.INetSharingConfigurationForINetConnection[Freigabe].EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC);
+                                        var con = SharingManager.INetSharingConfigurationForINetConnection[Freigabe];
+                                        con.EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC);
                                         break;
                                     }
                                     catch

@@ -11,7 +11,7 @@ using System.Windows;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("WlanRouter")]
-[assembly: AssemblyCopyright("Copyright ©  2015 Christopher Homberger")]
+[assembly: AssemblyCopyright("Open Source feel free to contibute")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
