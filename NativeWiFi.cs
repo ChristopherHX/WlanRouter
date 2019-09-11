@@ -52,20 +52,21 @@ enum WLAN_HOSTED_NETWORK_OPCODE {
   v1_enum
 }
 
-
-unsafe struct DOT11_SSID {
-
-}
-
 [StructLayout(LayoutKind.Sequential)]
 unsafe struct WLAN_HOSTED_NETWORK_CONNECTION_SETTINGS {
     public uint uSSIDLength;
-    [MarshalAs(UnmanagedType.ByValArray, ArraySubType = UnmanagedType.Struct, SizeConst = 32)]
+    [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
     public byte[] ucSSID;
     public DWORD      dwMaxNumberOfPeers;
 }
 
-public unsafe class NativeWiFi {
+// [StructLayout(LayoutKind.Sequential)]
+// unsafe struct _WLAN_HOSTED_NETWORK_SECURITY_SETTINGS {
+//   DOT11_AUTH_ALGORITHM   dot11AuthAlgo;
+//   DOT11_CIPHER_ALGORITHM dot11CipherAlgo;
+// }
+
+public unsafe class NativeWiFi : IWlanRouter {
     DWORD clientHandle = 0;
 
     [DllImport("Wlanapi.dll")]
@@ -166,6 +167,8 @@ public unsafe class NativeWiFi {
     void*                       pvReserved
     );
 
+    // Encoding oemencoding = Encoding.GetEncoding(850/* Convert.ToInt32(Microsoft.Win32.Registry.GetValue("HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage", "OEMCP", 437)) */);
+
     // [DllImport("Kernel32.dll")]
     // static extern UInt32 GetConsoleOutputCP();
 
@@ -202,28 +205,130 @@ public unsafe class NativeWiFi {
         }
     }
 
-    public String SSID {
+    private WLAN_HOSTED_NETWORK_CONNECTION_SETTINGS NetworkConnectionSettings {
+        get {
+            unsafe {
+                DWORD size = 0;
+                void* psettings;
+                WLAN_OPCODE_VALUE_TYPE type;
+                var res = WlanHostedNetworkQueryProperty(clientHandle, WLAN_HOSTED_NETWORK_OPCODE.wlan_hosted_network_opcode_connection_settings, &size, &psettings, &type, null);
+                if(res != 0) {
+                    throw new Exception("WlanHostedNetworkQueryProperty failed with (" + res + ")");
+                }
+                return Marshal.PtrToStructure<WLAN_HOSTED_NETWORK_CONNECTION_SETTINGS>((IntPtr)psettings);
+            }
+        }
         set {
             unsafe {
                 WLAN_HOSTED_NETWORK_REASON reason;
-                var settings = new WLAN_HOSTED_NETWORK_CONNECTION_SETTINGS();
-                var oemencoding = Encoding.GetEncoding(Convert.ToInt32(Microsoft.Win32.Registry.GetValue("HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage", "OEMCP", 437)));
-                settings.ucSSID = new byte[32];
-                settings.uSSIDLength = (uint)oemencoding.GetBytes(value, 0, Math.Min(value.Length, 32), settings.ucSSID, 0);
-                settings.dwMaxNumberOfPeers = 20;
                 var size = Marshal.SizeOf<WLAN_HOSTED_NETWORK_CONNECTION_SETTINGS>();
                 var psettings = Marshal.AllocHGlobal(size);
-                Marshal.StructureToPtr(settings, psettings, false);
-                var res = WlanHostedNetworkSetProperty(clientHandle, WLAN_HOSTED_NETWORK_OPCODE.wlan_hosted_network_opcode_connection_settings, size, /* (void*)GCHandle.ToIntPtr(handle) */(void*)psettings, &reason, null);
+                Marshal.StructureToPtr(value, psettings, false);
+                var res = WlanHostedNetworkSetProperty(clientHandle, WLAN_HOSTED_NETWORK_OPCODE.wlan_hosted_network_opcode_connection_settings, size, (void*)psettings, &reason, null);
                 Marshal.FreeHGlobal(psettings);
                 if(res != 0) {
-                    throw new Exception("WlanHostedNetworkSetProperty failed with (" + reason + ")");
+                    throw new Exception("WlanHostedNetworkSetProperty failed with (" + res + ":" + reason + ")");
                 }
             }
         }
     }
 
-    public void StartHostedNetwork() {
+    // private WLAN_HOSTED_NETWORK_S NetworkSecuritySettings {
+    //     get {
+    //         unsafe {
+    //             DWORD size = 0;
+    //             void* psettings;
+    //             WLAN_OPCODE_VALUE_TYPE type;
+    //             var res = WlanHostedNetworkQueryProperty(clientHandle, WLAN_HOSTED_NETWORK_OPCODE.wlan_hosted_network_opcode_security_settings, &size, &psettings, &type, null);
+    //             if(res != 0) {
+    //                 throw new Exception("WlanHostedNetworkQueryProperty failed with (" + res + ")");
+    //             }
+    //             return Marshal.PtrToStructure<WLAN_HOSTED_NETWORK_CONNECTION_SETTINGS>((IntPtr)psettings);
+    //         }
+    //     }
+    //     set {
+    //         unsafe {
+    //             WLAN_HOSTED_NETWORK_REASON reason;
+    //             var size = Marshal.SizeOf<WLAN_HOSTED_NETWORK_CONNECTION_SETTINGS>();
+    //             var psettings = Marshal.AllocHGlobal(size);
+    //             Marshal.StructureToPtr(value, psettings, false);
+    //             var res = WlanHostedNetworkSetProperty(clientHandle, WLAN_HOSTED_NETWORK_OPCODE.wlan_hosted_network_opcode_connection_settings, size, (void*)psettings, &reason, null);
+    //             Marshal.FreeHGlobal(psettings);
+    //             if(res != 0) {
+    //                 throw new Exception("WlanHostedNetworkSetProperty failed with (" + res + ":" + reason + ")");
+    //             }
+    //         }
+    //     }
+    // } 
+
+    public String SSID {
+        get {
+            var settings = NetworkConnectionSettings;
+            StringBuilder builder = new StringBuilder();
+            for (uint i = 0; i < settings.uSSIDLength; i++) {
+                builder.Append((char)settings.ucSSID[i]);
+            }
+            return builder.ToString();
+            // throw new Exception(settings.ucSSID[6].ToString());
+            // return oemencoding.GetString(settings.ucSSID, 0, (int)settings.uSSIDLength);
+        }
+        set {
+            var settings = NetworkConnectionSettings;
+            for (int i = 0; i < value.Length; i++) {
+                settings.ucSSID[i] = (byte)value[i];
+            }
+            settings.uSSIDLength = (uint)value.Length; //(uint)oemencoding.GetBytes(value, 0, Math.Min(value.Length, 32), settings.ucSSID, 0);
+            NetworkConnectionSettings = settings;
+        }
+    }
+
+    public DWORD MaxNumberOfPeers {
+        get {
+            return NetworkConnectionSettings.dwMaxNumberOfPeers;
+        }
+        set {
+            var settings = NetworkConnectionSettings;
+            settings.dwMaxNumberOfPeers = value;
+            NetworkConnectionSettings = settings;
+        }
+    }
+
+    public string Key { get {
+        WLAN_HOSTED_NETWORK_REASON reason;
+        DWORD dwKeyLength = 0;
+        byte * key = null;
+        bool isPassPhrase = true;
+        bool persisten = true;
+        DWORD ret = WlanHostedNetworkQuerySecondaryKey(clientHandle, &dwKeyLength, &key, &isPassPhrase, &persisten, &reason, null);
+        if(ret != 0) {
+            throw new Exception("WlanHostedNetworkQuerySecondaryKey failed with (" + reason + ")");
+        }
+        StringBuilder builder = new StringBuilder(dwKeyLength);
+        for (int i = 0; i < dwKeyLength; i++) {
+            builder.Append((char)key[i]);
+        }
+        return builder.ToString();
+    }
+        set {
+            unsafe {
+                WLAN_HOSTED_NETWORK_REASON reason;
+                byte* ptr = (byte*)Marshal.AllocHGlobal(value.Length + 1);
+                // IntPtr ptr = Marshal.StringToHGlobalAnsi(value);
+                for (int i = 0; i < value.Length; i++) {
+                    ptr[i] = (byte)value[i];
+                }
+                ptr[value.Length] = 0;
+                DWORD ret = WlanHostedNetworkSetSecondaryKey(clientHandle, value.Length  + 1, ptr/* Encoding.ASCII.GetBytes(value) */, true, true, &reason, null);
+                Marshal.FreeHGlobal((IntPtr)ptr);
+                if(ret != 0) {
+                    throw new Exception("WlanHostedNetworkSetSecondaryKey failed with (" + reason + ")");
+                }
+            }
+        }
+    }
+
+    public void Start()
+    {
         unsafe {
             WLAN_HOSTED_NETWORK_REASON reason;
             if(WlanHostedNetworkForceStart(clientHandle, &reason, null) != 0) {
@@ -232,16 +337,18 @@ public unsafe class NativeWiFi {
         }
     }
 
-    public void StopHostedNetwork() {
+    public void Stop()
+    {
         unsafe {
             WLAN_HOSTED_NETWORK_REASON reason;
             if(WlanHostedNetworkForceStop(clientHandle, &reason, null) != 0) {
-                throw new Exception("WlanHostedNetworkForceStart failed with (" + reason + ")");
+                throw new Exception("WlanHostedNetworkForceStop failed with (" + reason + ")");
             }
         }
     }
 
     ~NativeWiFi() {
+        Stop();
         if(clientHandle != 0) {
             unsafe
             {

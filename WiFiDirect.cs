@@ -1,6 +1,6 @@
 using Windows.Devices.WiFiDirect;
 using Windows.Security.Credentials;
-public class WiFiDirect {
+public class WiFiDirect : IWlanRouter {
     WiFiDirectAdvertisementPublisher _publisher;
     public WiFiDirect() {
         // Begin advertising for legacy clients
@@ -11,15 +11,24 @@ public class WiFiDirect {
 
         // Setup Advertisement to use a custom SSID and WPA2 passphrase
         _publisher.Advertisement.LegacySettings.IsEnabled = true;
+
+        _publisher.Advertisement.LegacySettings.Passphrase = new PasswordCredential();
+
+        try {
+            var nw = new NativeWiFi();
+            SSID = nw.SSID;
+            Key = nw.Key;
+        } catch {
+
+        }
     }
 
-    public void SetSSID(string ssid) {
-        _publisher.Advertisement.LegacySettings.Ssid = ssid;
+    public string SSID {
+        get => _publisher.Advertisement.LegacySettings.Ssid;
+        set => _publisher.Advertisement.LegacySettings.Ssid = value;
     }
 
-    public void SetPassword(string password) {
-        _publisher.Advertisement.LegacySettings.Passphrase = new PasswordCredential { Password = password };
-    }
+    public string Key { get => _publisher.Advertisement.LegacySettings.Passphrase.Password ?? ""; set => _publisher.Advertisement.LegacySettings.Passphrase.Password = value; }
 
     public void Start() {
         if (_publisher.Status != WiFiDirectAdvertisementPublisherStatus.Started)
@@ -32,6 +41,17 @@ public class WiFiDirect {
         if (_publisher.Status == WiFiDirectAdvertisementPublisherStatus.Started)
         {
             _publisher.Stop();
+        }
+    }
+
+    ~WiFiDirect() {
+        Stop();
+        try {
+            var nw = new NativeWiFi();
+            nw.SSID = SSID;
+            nw.Key = Key;
+        } catch {
+
         }
     }
 }

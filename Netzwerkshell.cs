@@ -4,17 +4,17 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-public class Netzwerkshell
+public class Netzwerkshell : IWlanRouter
 {
-    public int codepage = 437;
+    private Encoding codepage;
 
     public Netzwerkshell()
     {
         try {
-            codepage = Convert.ToInt32(this.info("cmd", "/c chcp")[0].TrimEnd('.'));
+            codepage = Encoding.GetEncoding(Convert.ToInt32(Microsoft.Win32.Registry.GetValue("HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage", "OEMCP", 437)));
         }
         catch {
-            
+            codepage = Encoding.GetEncoding(437);
         }
     }
 
@@ -24,7 +24,7 @@ public class Netzwerkshell
         cmd.StartInfo.UseShellExecute = false;
         cmd.StartInfo.RedirectStandardOutput = true;
         cmd.StartInfo.CreateNoWindow = true;
-        cmd.StartInfo.StandardOutputEncoding = Encoding.GetEncoding(codepage);
+        cmd.StartInfo.StandardOutputEncoding = codepage;
         cmd.StartInfo.FileName = filename;
             cmd.StartInfo.Arguments = command;
         cmd.Start();
@@ -69,14 +69,24 @@ public class Netzwerkshell
             return null;
     }
 
-    public string get_password()
-    {
-        return info("netsh", "wlan show hostednetwork setting=security")[3];
+    public string SSID { 
+        get {
+            return info("netsh", "wlan show hostednetwork")[1].Replace("\"", null);
+        }
+        set {
+            if (cmd("netsh", "wlan set hostednetwork ssid=\"" + value.Replace("\"", null) + "\" mode=allow") == null)
+                throw new Exception("Error");
+        }
     }
 
-    public string get_ssid()
-    {
-        return info("netsh", "wlan show hostednetwork")[1].Replace("\"", null);
+    public string Key {
+        get {
+            return info("netsh", "wlan show hostednetwork setting=security")[3];
+        }
+        set {
+            if (cmd("netsh", "wlan set hostednetwork key=\"" + value.Replace("\"", null) + "\" mode=allow") == null)
+                throw new Exception("Error");
+        }
     }
 
     public bool get_state()
@@ -90,21 +100,19 @@ public class Netzwerkshell
         return result[9] + "/" + result[2];
     }
 
-    public void set_hostednetwork(string ssid, string key)
-    {
-        if (cmd("netsh", "wlan set hostednetwork ssid=\"" + ssid.Replace("\"", null) + "\" key=\"" + key.Replace("\"", null) + "\" mode=allow") == null)
-            throw new Exception("Error");
-    }
-
-    public void start_hostednetwork()
+    public void Start()
     {
         if (cmd("netsh", "wlan start hostednetwork") == null)
             throw new Exception("Error");
     }
 
-    public void stop_hostednetwork()
+    public void Stop()
     {
         if (cmd("netsh", "wlan stop hostednetwork") == null)
             throw new Exception("Error");
+    }
+
+    ~Netzwerkshell() {
+        Stop();
     }
 }

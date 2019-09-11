@@ -96,6 +96,8 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IWlanRouter.cs" />
+    <Compile Include="NativeIcon.cs" />
     <Compile Include="WiFiDirect.cs" />
     <Compile Include="NativeWiFi.cs" />
     <Compile Include="Netzwerkshell.cs" />
