@@ -158,4 +158,7 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <Target Name="UpdateLicense" >
+    <WriteLinesToFile File="Properties\AssemblyInfo.cs" Lines="$([System.Text.RegularExpressions.Regex]::Replace($([System.io.File]::ReadAllText('Properties\AssemblyInfo.cs')), '(AssemblyCopyright) *\( *&quot;(\\&quot;|[^&quot;])*&quot; *\)', '$1(&quot;$([System.Text.RegularExpressions.Regex]::Replace($([System.Text.RegularExpressions.Regex]::Replace($([System.io.File]::ReadAllText('LICENSE')), '\n', '\n')), '&quot;', '\&quot;'))&quot;)'))" Overwrite="True" Encoding="windows-1250"/>
+  </Target>
 </Project>
