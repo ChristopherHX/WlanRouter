@@ -15,7 +15,6 @@ namespace WlanRouter
     {
         IWlanRouter router;
         bool Steuer_Taste_state = true;
-        private static readonly INetSharingManager SharingManager = new NetSharingManager();
 
         public MainWindow()
         {
@@ -58,6 +57,7 @@ namespace WlanRouter
                 Internet_Freigabe_Auswahlbox.Items.Clear();
                 Internet_Freigabe_Auswahlbox.Items.Add(new ComboBoxItem { Content = "Keine Internetfreigabe" });
                 Internet_Freigabe_Auswahlbox.SelectedIndex = 0;
+                INetSharingManager SharingManager = new NetSharingManager();
                 foreach (var con in from INetConnection c in SharingManager.EnumEveryConnection
                                     where SharingManager.NetConnectionProps[c].Status == tagNETCON_STATUS.NCS_CONNECTED
                                     select c)
@@ -83,8 +83,9 @@ namespace WlanRouter
             }
         }
 
-        private void Remove_ICS()
+        private void DisableSharing()
         {
+            INetSharingManager SharingManager = new NetSharingManager();
             foreach (var con in from INetSharingConfiguration conf in from INetConnection c in SharingManager.EnumEveryConnection
                                 select SharingManager.INetSharingConfigurationForINetConnection[c]
                                 where conf.SharingEnabled
@@ -92,25 +93,34 @@ namespace WlanRouter
             {
                 con.DisableSharing();
             }
-        }
 
-        public static void CleanupWMISharingEntries()
-        {
             var scope = new ManagementScope("root\\Microsoft\\HomeNet");
             scope.Connect();
 
-            var options = new PutOptions();
-            options.Type = PutType.UpdateOnly;
-
-            var query = new ObjectQuery("SELECT * FROM HNet_ConnectionProperties");
-            var srchr = new ManagementObjectSearcher(scope, query);
-            foreach (ManagementObject entry in srchr.Get())
+            foreach (var type in new string[] { "HNet_ConnectionProperties", "HNet_Connection" })
             {
-                if ((bool)entry["IsIcsPrivate"])
-                    entry["IsIcsPrivate"] = false;
-                if ((bool)entry["IsIcsPublic"])
-                    entry["IsIcsPublic"] = false;
-                entry.Put(options);
+                var query = new ObjectQuery("SELECT * FROM " + type);
+                var srchr = new ManagementObjectSearcher(scope, query);
+                foreach (ManagementObject entry in srchr.Get())
+                {
+                    entry.Dispose();
+                    entry.Delete();
+                }
+            }
+            {
+                var options = new PutOptions();
+                options.Type = PutType.UpdateOnly;
+
+                var query = new ObjectQuery("SELECT * FROM HNet_ConnectionProperties");
+                var srchr = new ManagementObjectSearcher(scope, query);
+                foreach (ManagementObject entry in srchr.Get())
+                {
+                    if ((bool)entry["IsIcsPrivate"])
+                        entry["IsIcsPrivate"] = false;
+                    if ((bool)entry["IsIcsPublic"])
+                        entry["IsIcsPublic"] = false;
+                    entry.Put(options);
+                }
             }
         }
 
@@ -127,27 +137,14 @@ namespace WlanRouter
                             router.SSID = Name_Textbox.Text;
                             router.Key = Passwort_Pbox.Password;
                             router.Start();
+                            DisableSharing();
+                            INetSharingManager SharingManager = new NetSharingManager();
                             INetConnection Router = (from INetConnection con in SharingManager.EnumEveryConnection
                                                      where SharingManager.NetConnectionProps[con].Status == tagNETCON_STATUS.NCS_CONNECTED
                                                      where SharingManager.NetConnectionProps[con].DeviceName.StartsWith("Microsoft ")
                                                      select con).First();
-                            while (true)
-                            {
-                                try
-                                {
-                                    Remove_ICS();
-                                    break;
-                                }
-                                catch
-                                {
-                                    if (MessageBox.Show("Entfernen von der Internetfreigabe fehlgeschlagen" + System.Environment.NewLine + "Erneut Versuchen?", "Fehler", MessageBoxButton.OKCancel) == MessageBoxResult.OK)
-                                        continue;
-                                    throw new Exception("Fehler");
-                                }
-                            }
                             if(Internet_Freigabe_Auswahlbox.SelectedIndex != 0)
                             {
-                                CleanupWMISharingEntries();
                                 INetConnection Freigabe = (from INetConnection con in SharingManager.EnumEveryConnection where SharingManager.get_NetConnectionProps(con).DeviceName == Internet_Freigabe_Auswahlbox.SelectedValue.ToString().Split(Environment.NewLine.ToArray(), StringSplitOptions.None).Last() select con).First();                            
                                 while (true)
                                 {
@@ -190,6 +187,7 @@ namespace WlanRouter
                     case false:
                         try
                         {
+                            DisableSharing();
                             router.Stop();
                             refresh();
                             control_btn_change(2, true);
