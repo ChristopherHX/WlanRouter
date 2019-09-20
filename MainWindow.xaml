@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WlanRouter"
         mc:Ignorable="d"
-        Title="Wlan Router" MinWidth="350" Width="350" MinHeight="200" Height="200" Closing="Window_Closing">
+        MinWidth="350" Width="350" MinHeight="200" Height="200" Closing="Window_Closing">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
@@ -17,12 +17,12 @@
             <RowDefinition Height="auto"/>
             <RowDefinition Height="auto"/>
         </Grid.RowDefinitions>
-        <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" x:Name="Steuer_Taste" Content="Wlan Router starten" Margin="5,5,5,2.5" FontSize="20"/>
-        <ComboBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="Internet_Freigabe_Auswahlbox" SelectedValuePath="Content" SelectedIndex="0" VerticalAlignment="Stretch" Margin="5,2.5,5,2.5" FontSize="14.667"/>
-        <TextBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" x:Name="Name_Textbox" TextWrapping="NoWrap" FontSize="16" VerticalAlignment="Stretch" Margin="5,2.5,5,2.5" MaxLines="1" IsUndoEnabled="True"/>
-        <PasswordBox Grid.Row="3" Grid.Column="0" x:Name="Passwort_Pbox" FontSize="16" VerticalAlignment="Stretch" Margin="5,2.5,2.5,5"/>
-        <TextBox Grid.Row="3" Grid.Column="0" x:Name="Passwort_Tbox" Visibility="Collapsed" FontSize="16" VerticalAlignment="Stretch" Margin="5,2.5,2.5,5"/>
-        <Button Grid.Row="3" Grid.Column="1" x:Name="Passwort_STaste" VerticalAlignment="Stretch" Margin="2.5,2.5,5,5" Content="abc"/>
+        <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" x:Name="ctrl_key" Margin="5,5,5,2.5" FontSize="20"/>
+        <ComboBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="internet_sharing_box" SelectedValuePath="Content" SelectedIndex="0" VerticalAlignment="Stretch" Margin="5,2.5,5,2.5" FontSize="14.667"/>
+        <TextBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" x:Name="ssid_box" TextWrapping="NoWrap" FontSize="16" VerticalAlignment="Stretch" Margin="5,2.5,5,2.5" MaxLines="1" IsUndoEnabled="True"/>
+        <PasswordBox Grid.Row="3" Grid.Column="0" x:Name="password_box" FontSize="16" VerticalAlignment="Stretch" Margin="5,2.5,2.5,5"/>
+        <TextBox Grid.Row="3" Grid.Column="0" x:Name="password_cleartext_box" Visibility="Collapsed" FontSize="16" VerticalAlignment="Stretch" Margin="5,2.5,2.5,5"/>
+        <Button Grid.Row="3" Grid.Column="1" x:Name="password_cleartext_switch" VerticalAlignment="Stretch" Margin="2.5,2.5,5,5" Content="abc"/>
         <!-- <TextBox x:Name="RouterIP" TextWrapping="NoWrap" FontSize="16" VerticalAlignment="Bottom" Height="25" Margin="5,0,5,35" MaxLines="1" IsUndoEnabled="False"/> -->
 
     </Grid>

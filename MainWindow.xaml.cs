@@ -8,72 +8,94 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using System.Runtime.InteropServices;
 using System.Management;
+using System.Threading;
 
 namespace WlanRouter
 {
     public partial class MainWindow : Window
     {
-        IWlanRouter router;
-        bool Steuer_Taste_state = true;
+        private static string TITLE = "Wlan Router";
+        private static string FAILED = "Failed";
+        private static string UNSUPPORTED = "Unsupported";
+        private static string NO_INTERNET_SHARING = "Keine Internetfreigabe";
+        private static string FAILDED_TO_STOP = "Failed to stop hostednetwork";
+        private static string START_WLAN_ROUTER = "Wlan Router starten";
+        private static string WAIT = "Warten";
+        private static string STOP_WLAN_ROUTER = "Wlan Router stoppen";
+        private static string SSID_HINT = "Name (SSID) des Wlan Routers";
+        private static string KEY_HINT = "Passwort (WPA2PSK) des Wlan Routers";
+        private static string KEY_HINT_FORMAT = "(noch min {0} Zeichen)";
+        private IWlanRouter router;
+        private bool ctrl_key_state = true;
+        private Thread background;
+        private Dispatcher background_dispatcher;
 
         public MainWindow()
         {
             InitializeComponent();
-            try
-            {
-                if (Environment.OSVersion.Version.Major >= 6 && Environment.OSVersion.Version.Minor > 1)
+            Title = TITLE;
+            var uithread = Dispatcher;
+            background = new Thread(new ThreadStart(() => {
+                try
                 {
-                    router = new WiFiDirect();
+                    background_dispatcher = Dispatcher.CurrentDispatcher;
+                    router = (Environment.OSVersion.Version.Major >= 6 && Environment.OSVersion.Version.Minor > 1) ? (IWlanRouter)new WiFiDirect() : new NativeWiFi();
+                    var ssid = router.SSID;
+                    var key = router.Key;
+                    uithread.InvokeAsync(() => {
+                        ssid_box.Text = ssid;
+                        password_box.Password = key;
+                    }, DispatcherPriority.Input);
                 }
-                else
+                catch (Exception ex)
                 {
-                    router = new NativeWiFi();
+                    Dispatcher.InvokeAsync(() => {
+                        MessageBox.Show(UNSUPPORTED + Environment.NewLine + ex.Message, FAILED, MessageBoxButton.OK);
+                        System.Windows.Application.Current.Shutdown();
+                    }, DispatcherPriority.Normal);
                 }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.ToString() + Environment.NewLine + "Unsupported", "Failed", MessageBoxButton.OK);
-            }
+                Dispatcher.Run();
+            }));
+            background.Start();
             try
             {
                 // Use System Router Icon
                 Icon = NativeIcon.ExtractIcon("DDORes.dll", -2378);
             }
-            catch { }
-            Steuer_Taste.Click += (sender, e) => Steuer_Taste_Klick();
-            Name_Textbox.TextChanged += (sender, e) => Eingabe_changed();
-            Passwort_Pbox.PasswordChanged += (sender, e) => Eingabe_changed();
-            Passwort_Tbox.TextChanged += (sender, e) => Eingabe_changed();
-            Passwort_STaste.Click += (sender, e) => Passwort_STaste_Klick();
+            catch { /* Symbol not found (no requirement to run) */ }
+            ctrl_key.Click += (sender, e) => ctrl_button_click();
+            ssid_box.TextChanged += (sender, e) => input_changed();
+            password_box.PasswordChanged += (sender, e) => input_changed();
+            password_cleartext_box.TextChanged += (sender, e) => input_changed();
+            password_cleartext_switch.Click += (sender, e) => password_show_hide_click();
             refresh();
+            control_btn_change(2, true);            
         }
 
         private void refresh()
         {
             try
             {
-                Name_Textbox.Text = router.SSID;
-                Passwort_Pbox.Password = router.Key;
-                Internet_Freigabe_Auswahlbox.Items.Clear();
-                Internet_Freigabe_Auswahlbox.Items.Add(new ComboBoxItem { Content = "Keine Internetfreigabe" });
-                Internet_Freigabe_Auswahlbox.SelectedIndex = 0;
-                INetSharingManager SharingManager = new NetSharingManager();
-                foreach (var con in from INetConnection c in SharingManager.EnumEveryConnection
-                                    where SharingManager.NetConnectionProps[c].Status == tagNETCON_STATUS.NCS_CONNECTED
+                internet_sharing_box.Items.Clear();
+                internet_sharing_box.Items.Add(new ComboBoxItem { Content = NO_INTERNET_SHARING });
+                internet_sharing_box.SelectedIndex = 0;
+                INetSharingManager sharingManager = new NetSharingManager();
+                foreach (var con in from INetConnection c in sharingManager.EnumEveryConnection
+                                    where sharingManager.NetConnectionProps[c].Status == tagNETCON_STATUS.NCS_CONNECTED
                                     select c)
                 {
-                    if (SharingManager.NetConnectionProps[con].DeviceName.StartsWith("Microsoft "))
+                    if (sharingManager.NetConnectionProps[con].DeviceName.StartsWith("Microsoft "))
                     {
-                        string con_name = SharingManager.NetConnectionProps[con].Name + System.Environment.NewLine + SharingManager.NetConnectionProps[con].DeviceName;
-                        Internet_Freigabe_Auswahlbox.Items.Add(new ComboBoxItem { Content = con_name });
+                        string con_name = sharingManager.NetConnectionProps[con].Name + System.Environment.NewLine + sharingManager.NetConnectionProps[con].DeviceName;
+                        internet_sharing_box.Items.Add(new ComboBoxItem { Content = con_name });
                         control_btn_change(1, true);
                     }
                     else
                     {
-                        string con_name = SharingManager.NetConnectionProps[con].Name + System.Environment.NewLine + SharingManager.NetConnectionProps[con].DeviceName;
-                        Internet_Freigabe_Auswahlbox.Items.Add(new ComboBoxItem { Content = con_name });
-                        if (SharingManager.INetSharingConfigurationForINetConnection[con].SharingEnabled && SharingManager.INetSharingConfigurationForINetConnection[con].SharingConnectionType == tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC)
-                            Internet_Freigabe_Auswahlbox.SelectedValue = con_name;
+                        string con_name = sharingManager.NetConnectionProps[con].Name + System.Environment.NewLine + sharingManager.NetConnectionProps[con].DeviceName;
+                        internet_sharing_box.Items.Add(new ComboBoxItem { Content = con_name });
+                        if (sharingManager.INetSharingConfigurationForINetConnection[con].SharingEnabled && sharingManager.INetSharingConfigurationForINetConnection[con].SharingConnectionType == tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC)
+                            internet_sharing_box.SelectedValue = con_name;
                     }
                 }
             }
@@ -85,9 +107,9 @@ namespace WlanRouter
 
         private void DisableSharing()
         {
-            INetSharingManager SharingManager = new NetSharingManager();
-            foreach (var con in from INetSharingConfiguration conf in from INetConnection c in SharingManager.EnumEveryConnection
-                                select SharingManager.INetSharingConfigurationForINetConnection[c]
+            INetSharingManager sharingManager = new NetSharingManager();
+            foreach (var con in from INetSharingConfiguration conf in from INetConnection c in sharingManager.EnumEveryConnection
+                                select sharingManager.INetSharingConfigurationForINetConnection[c]
                                 where conf.SharingEnabled
                                 select conf)
             {
@@ -124,82 +146,64 @@ namespace WlanRouter
             }
         }
 
-        private void Steuer_Taste_Klick()
+        private async void ctrl_button_click()
         {
             control_btn_change(0, true);
-            Dispatcher.InvokeAsync(() =>
+            var ssid = ssid_box.Text;
+            var key = password_box.Password;
+            var share = internet_sharing_box.SelectedIndex != 0 ? internet_sharing_box.SelectedValue.ToString().Split(Environment.NewLine.ToArray(), StringSplitOptions.None).Last() : null;
+            await background_dispatcher.InvokeAsync(async () =>
             {
-                switch (Steuer_Taste_state)
+                switch (ctrl_key_state)
                 {
                     case true:
                         try
                         {
-                            router.SSID = Name_Textbox.Text;
-                            router.Key = Passwort_Pbox.Password;
+                            router.SSID = ssid;
+                            router.Key = key;
                             router.Start();
                             DisableSharing();
-                            INetSharingManager SharingManager = new NetSharingManager();
-                            INetConnection Router = (from INetConnection con in SharingManager.EnumEveryConnection
-                                                     where SharingManager.NetConnectionProps[con].Status == tagNETCON_STATUS.NCS_CONNECTED
-                                                     where SharingManager.NetConnectionProps[con].DeviceName.StartsWith("Microsoft ")
+                            INetSharingManager sharingManager = new NetSharingManager();
+                            INetConnection Router = (from INetConnection con in sharingManager.EnumEveryConnection
+                                                     where sharingManager.NetConnectionProps[con].Status == tagNETCON_STATUS.NCS_CONNECTED
+                                                     where sharingManager.NetConnectionProps[con].DeviceName.StartsWith("Microsoft ")
                                                      select con).First();
-                            if(Internet_Freigabe_Auswahlbox.SelectedIndex != 0)
+                            if(share != null)
                             {
-                                INetConnection Freigabe = (from INetConnection con in SharingManager.EnumEveryConnection where SharingManager.get_NetConnectionProps(con).DeviceName == Internet_Freigabe_Auswahlbox.SelectedValue.ToString().Split(Environment.NewLine.ToArray(), StringSplitOptions.None).Last() select con).First();                            
-                                while (true)
-                                {
-                                    try
-                                    {
-                                        var con = SharingManager.INetSharingConfigurationForINetConnection[Freigabe];
-                                        con.EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC);
-                                        break;
-                                    }
-                                    catch
-                                    {
-                                        if (MessageBox.Show("Erstellen von der Internetfreigabe fehlgeschlagen (Freigabe Netzwerk)" + System.Environment.NewLine + "Erneut Versuchen?", "Fehler", MessageBoxButton.OKCancel) == MessageBoxResult.OK)
-                                            continue;
-                                        throw new Exception("Fehler");
-                                    }
-                                }
-                                while (true)
-                                {
-                                    try
-                                    {
-                                        SharingManager.INetSharingConfigurationForINetConnection[Router].EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PRIVATE);
-                                        break;
-                                    }
-                                    catch
-                                    {
-                                        if (MessageBox.Show("Erstellen von der Internetfreigabe fehlgeschlagen (Einrichtung Router)" + System.Environment.NewLine + "Erneut Versuchen?", "Fehler", MessageBoxButton.OKCancel) == MessageBoxResult.OK)
-                                            continue;
-                                        throw new Exception("Fehler");
-                                    }
-                                }
+                                INetConnection Freigabe = (from INetConnection con in sharingManager.EnumEveryConnection where sharingManager.get_NetConnectionProps(con).DeviceName == share select con).First();                            
+                                sharingManager.INetSharingConfigurationForINetConnection[Freigabe].EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC);
+                                sharingManager.INetSharingConfigurationForINetConnection[Router].EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PRIVATE);
                             }
                         }
                         catch (Exception ex)
                         {
-                            MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK);
-                            control_btn_change(2, true);
+                            await Dispatcher.InvokeAsync(() => {
+                                MessageBox.Show(ex.Message, FAILED, MessageBoxButton.OK);
+                                control_btn_change(2, true);
+                            }, DispatcherPriority.Normal);
                         }
-                        refresh();
+                        await Dispatcher.InvokeAsync(refresh, DispatcherPriority.Normal);
                         break;
                     case false:
                         try
                         {
                             DisableSharing();
                             router.Stop();
-                            refresh();
-                            control_btn_change(2, true);
+                            await Dispatcher.InvokeAsync(() => {
+                                refresh();
+                                control_btn_change(2, true);
+                            }, DispatcherPriority.Normal);
                         }
-                        catch
+                        catch(Exception ex)
                         {
-                            MessageBox.Show("Failed to stop hostednetwork", "Error", MessageBoxButton.OK);
-                            control_btn_change(1, true);
+                            await Dispatcher.InvokeAsync(() => {
+                                MessageBox.Show(FAILDED_TO_STOP + System.Environment.NewLine + ex.Message, "Error", MessageBoxButton.OK);
+                                control_btn_change(1, true);
+                            }, DispatcherPriority.Normal);
                         }
                         break;
                 }
-            }, DispatcherPriority.Background);
+            },  DispatcherPriority.Normal);
         }
 
         private void control_btn_change(int state, bool mode)
@@ -208,87 +212,92 @@ namespace WlanRouter
             {
                 case 0:
                     Cursor = Cursors.Wait;
-                    Steuer_Taste.IsEnabled = false;
-                    Steuer_Taste.Content = "Warten";
-                    Name_Textbox.IsEnabled = false;
-                    Passwort_STaste.IsEnabled = false;
-                    Passwort_Tbox.IsEnabled = false;
-                    if (Passwort_Tbox.IsVisible)
-                        Passwort_STaste_Klick();
-                    Internet_Freigabe_Auswahlbox.IsEnabled = false;
-                    Passwort_Pbox.IsEnabled = false;
+                    ctrl_key.IsEnabled = false;
+                    ctrl_key.Content = WAIT;
+                    ssid_box.IsEnabled = false;
+                    password_cleartext_switch.IsEnabled = false;
+                    password_cleartext_box.IsEnabled = false;
+                    if (password_cleartext_box.IsVisible)
+                        password_show_hide_click();
+                    internet_sharing_box.IsEnabled = false;
+                    password_box.IsEnabled = false;
                     break;
                 case 1:
-                    Steuer_Taste_state = false;
-                    Steuer_Taste.Content = "Wlan Router stoppen";
-                    Name_Textbox.IsReadOnly = true;
-                    Passwort_Tbox.IsReadOnly = true;
+                    ctrl_key_state = false;
+                    ctrl_key.Content = STOP_WLAN_ROUTER;
+                    ssid_box.IsReadOnly = true;
+                    password_cleartext_box.IsReadOnly = true;
                     if (mode)
                     {
-                        Passwort_STaste.IsEnabled = true;
-                        Passwort_Tbox.IsEnabled = true;
-                        Name_Textbox.IsEnabled = true;
-                        Steuer_Taste.IsEnabled = true;
+                        password_cleartext_switch.IsEnabled = true;
+                        password_cleartext_box.IsEnabled = true;
+                        ssid_box.IsEnabled = true;
+                        ctrl_key.IsEnabled = true;
                         Cursor = Cursors.Arrow;
                     }
                     else
                     {
-                        Internet_Freigabe_Auswahlbox.IsEnabled = false;
-                        Passwort_Pbox.IsEnabled = false;
+                        internet_sharing_box.IsEnabled = false;
+                        password_box.IsEnabled = false;
                     }
                     break;
                 case 2:
-                    Steuer_Taste_state = true;
-                    Steuer_Taste.Content = "Wlan Router starten";
-                    Name_Textbox.IsReadOnly = false;
-                    Passwort_Tbox.IsReadOnly = false;
-                    Internet_Freigabe_Auswahlbox.IsEnabled = true;
-                    Passwort_STaste.IsEnabled = true;
-                    Name_Textbox.IsEnabled = true;
-                    Passwort_Tbox.IsEnabled = true;
-                    Passwort_Pbox.IsEnabled = true;
-                    Steuer_Taste.IsEnabled = true;
+                    ctrl_key_state = true;
+                    ctrl_key.Content = START_WLAN_ROUTER;
+                    ssid_box.IsReadOnly = false;
+                    password_cleartext_box.IsReadOnly = false;
+                    internet_sharing_box.IsEnabled = true;
+                    password_cleartext_switch.IsEnabled = true;
+                    ssid_box.IsEnabled = true;
+                    password_cleartext_box.IsEnabled = true;
+                    password_box.IsEnabled = true;
+                    ctrl_key.IsEnabled = true;
                     Cursor = Cursors.Arrow;
                     break;
             }
         }
 
-        private void Eingabe_changed()
+        private void input_changed()
         {
             Brush Brush_None = new SolidColorBrush();
-            Brush Name_Textbox_Hint = new VisualBrush(new Label() { Content = "Name (SSID) des Wlan Routers", Foreground = new SolidColorBrush(Colors.Gray) }) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, Viewbox = new Rect(0.0125, 0, 1, 1) };
-            Brush Passwort_Hint = new VisualBrush(new Label() { Content = "Passwort (WPA2PSK) des Wlan Routers", Foreground = new SolidColorBrush(Colors.Gray) }) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, Viewbox = new Rect(0.0125, 0, 1, 1) };
-            Brush Passwort_Info = new VisualBrush(new Label() { Content = "(noch min " + Convert.ToString(8 - (Passwort_Pbox.Visibility == Visibility.Visible && Passwort_Tbox.Visibility != Visibility.Visible ? Passwort_Pbox.Password.Length : Passwort_Tbox.Text.Length)) + " Zeichen)", Foreground = new SolidColorBrush(Colors.Red) }) { Stretch = Stretch.None, AlignmentX = AlignmentX.Right, Viewbox = new Rect(0, 0.05, 1, 1) };
-            Name_Textbox.Background = Name_Textbox.Text.Length == 0 ? Name_Textbox_Hint : Brush_None;
-            Passwort_Pbox.Background = Passwort_Pbox.Visibility == Visibility.Visible && Passwort_Pbox.Password.Length < 8 ? Passwort_Pbox.Password.Length == 0 ? Passwort_Hint : Passwort_Info : Brush_None;
-            Passwort_Tbox.Background = Passwort_Tbox.Visibility == Visibility.Visible && Passwort_Tbox.Text.Length < 8 ? Passwort_Tbox.Text.Length == 0 ? Passwort_Hint : Passwort_Info : Brush_None;
-            Steuer_Taste.IsEnabled = Steuer_Taste_state == true ? ((Passwort_Pbox.Visibility == Visibility.Visible && Passwort_Tbox.Visibility != Visibility.Visible ? Passwort_Pbox.Password.Length >= 8 : Passwort_Tbox.Text.Length >= 8) && Name_Textbox.Text.Length != 0) : true;
+            Brush ssid_box_hint = new VisualBrush(new Label() { Content = SSID_HINT, Foreground = new SolidColorBrush(Colors.Gray) }) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, Viewbox = new Rect(0.0125, 0, 1, 1) };
+            Brush Passwort_hint = new VisualBrush(new Label() { Content = KEY_HINT, Foreground = new SolidColorBrush(Colors.Gray) }) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, Viewbox = new Rect(0.0125, 0, 1, 1) };
+            Brush Passwort_Info = new VisualBrush(new Label() { Content = String.Format(KEY_HINT_FORMAT, Convert.ToString(8 - (password_box.Visibility == Visibility.Visible && password_cleartext_box.Visibility != Visibility.Visible ? password_box.Password.Length : password_cleartext_box.Text.Length))), Foreground = new SolidColorBrush(Colors.Red) }) { Stretch = Stretch.None, AlignmentX = AlignmentX.Right, Viewbox = new Rect(0, 0.05, 1, 1) };
+            ssid_box.Background = ssid_box.Text.Length == 0 ? ssid_box_hint : Brush_None;
+            password_box.Background = password_box.Visibility == Visibility.Visible && password_box.Password.Length < 8 ? password_box.Password.Length == 0 ? Passwort_hint : Passwort_Info : Brush_None;
+            password_cleartext_box.Background = password_cleartext_box.Visibility == Visibility.Visible && password_cleartext_box.Text.Length < 8 ? password_cleartext_box.Text.Length == 0 ? Passwort_hint : Passwort_Info : Brush_None;
+            ctrl_key.IsEnabled = ctrl_key_state == true ? ((password_box.Visibility == Visibility.Visible && password_cleartext_box.Visibility != Visibility.Visible ? password_box.Password.Length >= 8 : password_cleartext_box.Text.Length >= 8) && ssid_box.Text.Length != 0) : true;
         }
 
-        private void Passwort_STaste_Klick()
+        private void password_show_hide_click()
         {
-            switch (Convert.ToString(Passwort_STaste.Content))
+            switch (Convert.ToString(password_cleartext_switch.Content))
             {
                 case "●●●":
-                    Passwort_STaste.Content = "abc";
-                    Passwort_Pbox.Password = Passwort_Tbox.Text;
-                    Passwort_Tbox.Visibility = Visibility.Collapsed;
-                    Passwort_Pbox.Visibility = Visibility.Visible;
+                    password_cleartext_switch.Content = "abc";
+                    password_box.Password = password_cleartext_box.Text;
+                    password_cleartext_box.Visibility = Visibility.Collapsed;
+                    password_box.Visibility = Visibility.Visible;
                     break;
                 case "abc":
-                    Passwort_STaste.Content = "●●●";
-                    Passwort_Tbox.Text = Passwort_Pbox.Password;
-                    Passwort_Pbox.Visibility = Visibility.Collapsed;
-                    Passwort_Tbox.Visibility = Visibility.Visible;
+                    password_cleartext_switch.Content = "●●●";
+                    password_cleartext_box.Text = password_box.Password;
+                    password_box.Visibility = Visibility.Collapsed;
+                    password_cleartext_box.Visibility = Visibility.Visible;
                     break;
             }
-            Eingabe_changed();
+            input_changed();
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            // if (Steuer_Taste.IsEnabled)
-            //     netsh.set_hostednetwork(Name_Textbox.Text, Passwort_Pbox.Visibility == Visibility.Visible ? Passwort_Pbox.Password : Passwort_Tbox.Text);
+            var ssid = ssid_box.Text;
+            var key = password_box.Password;
+            background_dispatcher.InvokeAsync(() => {
+                router.SSID = ssid;
+                router.Key = key;
+                background_dispatcher.InvokeShutdown();
+            }, DispatcherPriority.Normal);
         }
     }
 }
