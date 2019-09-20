@@ -296,6 +296,7 @@ namespace WlanRouter
             background_dispatcher.InvokeAsync(() => {
                 router.SSID = ssid;
                 router.Key = key;
+                DisableSharing();
                 background_dispatcher.InvokeShutdown();
             }, DispatcherPriority.Normal);
         }
