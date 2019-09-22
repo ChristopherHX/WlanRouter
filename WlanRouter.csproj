@@ -76,7 +76,7 @@
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System.Runtime.WindowsRuntime" />
-    <Reference Include="C:\Program Files (x86)\Windows Kits\10\UnionMetadata\10.0.18362.0\Windows.winmd"/>
+    <Reference Include="$(WindowsSDKDir)\UnionMetadata\*.*.*.*\Windows.winmd"/>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
