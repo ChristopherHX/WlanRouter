@@ -31,14 +31,18 @@ public class WiFiDirect : IWlanRouter {
     public string Key { get => _publisher.Advertisement.LegacySettings.Passphrase.Password ?? ""; set => _publisher.Advertisement.LegacySettings.Passphrase.Password = value; }
 
     public void Start() {
-        if (_publisher.Status != WiFiDirectAdvertisementPublisherStatus.Started)
+        if (!IsRunning())
         {
             _publisher.Start();
         }
     }
 
+    public bool IsRunning() {
+        return _publisher.Status == WiFiDirectAdvertisementPublisherStatus.Started;
+    }
+
     public void Stop() {
-        if (_publisher.Status == WiFiDirectAdvertisementPublisherStatus.Started)
+        if (IsRunning())
         {
             _publisher.Stop();
         }

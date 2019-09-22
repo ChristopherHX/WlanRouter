@@ -9,9 +9,61 @@ enum WLAN_OPCODE_VALUE_TYPE {
 
 }
 
-enum WLAN_HOSTED_NETWORK_STATUS {
-
+enum WLAN_HOSTED_NETWORK_STATE {
+  wlan_hosted_network_unavailable,
+  wlan_hosted_network_idle,
+  wlan_hosted_network_active
 }
+
+enum WLAN_HOSTED_NETWORK_PEER_AUTH_STATE {
+  wlan_hosted_network_peer_state_invalid,
+  wlan_hosted_network_peer_state_authenticated
+}
+
+[StructLayoutAttribute(LayoutKind.Sequential, Pack = 1)]
+struct WLAN_HOSTED_NETWORK_PEER_STATE {
+  [MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
+  byte[]                              PeerMacAddress;
+  WLAN_HOSTED_NETWORK_PEER_AUTH_STATE PeerAuthState;
+}
+
+enum DOT11_PHY_TYPE : uint { 
+  dot11_phy_type_unknown     = 0,
+  dot11_phy_type_any         = 0,
+  dot11_phy_type_fhss        = 1,
+  dot11_phy_type_dsss        = 2,
+  dot11_phy_type_irbaseband  = 3,
+  dot11_phy_type_ofdm        = 4,
+  dot11_phy_type_hrdsss      = 5,
+  dot11_phy_type_erp         = 6,
+  dot11_phy_type_ht          = 7,
+  dot11_phy_type_vht         = 8,
+  dot11_phy_type_IHV_start   = 0x80000000,
+  dot11_phy_type_IHV_end     = 0xffffffff
+}
+
+[StructLayoutAttribute(LayoutKind.Sequential, Pack = 1)]
+struct GUID {
+  ulong          Data1;
+  ushort         Data2;
+  ushort         Data3;
+  [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
+  byte[]         Data4;
+}
+
+[StructLayoutAttribute(LayoutKind.Sequential, Pack = 1)]
+struct WLAN_HOSTED_NETWORK_STATUS {
+  public WLAN_HOSTED_NETWORK_STATE      HostedNetworkState;
+  GUID                           IPDeviceID;
+  [MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
+  byte[]                         wlanHostedNetworkBSSID;
+  DOT11_PHY_TYPE                 dot11PhyType;
+  ULONG                          ulChannelFrequency;
+  DWORD                          dwNumberOfPeers;
+//   WLAN_HOSTED_NETWORK_PEER_STATE **PeerList;
+  IntPtr PeerList;
+}
+
 enum WLAN_HOSTED_NETWORK_REASON {
   wlan_hosted_network_reason_success,
   wlan_hosted_network_reason_unspecified,
@@ -126,7 +178,7 @@ public unsafe class NativeWiFi : IWlanRouter {
     [DllImport("Wlanapi.dll")]
     static extern DWORD WlanHostedNetworkQueryStatus(
     HANDLE                      hClientHandle,
-    WLAN_HOSTED_NETWORK_STATUS** ppWlanHostedNetworkStatus,
+    void**                      ppWlanHostedNetworkStatus,
     void*                       pvReserved
     );
     [DllImport("Wlanapi.dll")]
@@ -165,6 +217,11 @@ public unsafe class NativeWiFi : IWlanRouter {
     HANDLE                      hClientHandle,
     WLAN_HOSTED_NETWORK_REASON* pFailReason,
     void*                       pvReserved
+    );
+
+    [DllImport("Wlanapi.dll")]
+    static extern void WlanFreeMemory(
+        void* pMemory
     );
 
     // Encoding oemencoding = Encoding.GetEncoding(850/* Convert.ToInt32(Microsoft.Win32.Registry.GetValue("HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage", "OEMCP", 437)) */);
@@ -334,6 +391,20 @@ public unsafe class NativeWiFi : IWlanRouter {
             if(WlanHostedNetworkForceStart(clientHandle, &reason, null) != 0) {
                 throw new Exception("WlanHostedNetworkForceStart failed with (" + reason + ")");
             }
+        }
+    }
+
+    public bool IsRunning() {
+        unsafe {
+            void* nstate;
+            var code = WlanHostedNetworkQueryStatus(clientHandle, &nstate, null);
+            if(code != 0) {
+                throw new Exception("WlanHostedNetworkForceStop failed with (" + code + ")");
+            }
+            var status = Marshal.PtrToStructure<WLAN_HOSTED_NETWORK_STATUS>((IntPtr)nstate);
+            WlanFreeMemory(nstate);
+            var state = status.HostedNetworkState;
+            return state == WLAN_HOSTED_NETWORK_STATE.wlan_hosted_network_active;
         }
     }
 

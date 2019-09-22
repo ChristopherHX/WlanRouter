@@ -107,41 +107,43 @@ namespace WlanRouter
 
         private void DisableSharing()
         {
-            INetSharingManager sharingManager = new NetSharingManager();
-            foreach (var con in from INetSharingConfiguration conf in from INetConnection c in sharingManager.EnumEveryConnection
-                                select sharingManager.INetSharingConfigurationForINetConnection[c]
-                                where conf.SharingEnabled
-                                select conf)
-            {
-                con.DisableSharing();
-            }
-
-            var scope = new ManagementScope("root\\Microsoft\\HomeNet");
-            scope.Connect();
-
-            foreach (var type in new string[] { "HNet_ConnectionProperties", "HNet_Connection" })
-            {
-                var query = new ObjectQuery("SELECT * FROM " + type);
-                var srchr = new ManagementObjectSearcher(scope, query);
-                foreach (ManagementObject entry in srchr.Get())
+            if(router.IsRunning()) {
+                INetSharingManager sharingManager = new NetSharingManager();
+                foreach (var con in from INetSharingConfiguration conf in from INetConnection c in sharingManager.EnumEveryConnection
+                                    select sharingManager.INetSharingConfigurationForINetConnection[c]
+                                    where conf.SharingEnabled
+                                    select conf)
                 {
-                    entry.Dispose();
-                    entry.Delete();
+                    con.DisableSharing();
                 }
-            }
-            {
-                var options = new PutOptions();
-                options.Type = PutType.UpdateOnly;
 
-                var query = new ObjectQuery("SELECT * FROM HNet_ConnectionProperties");
-                var srchr = new ManagementObjectSearcher(scope, query);
-                foreach (ManagementObject entry in srchr.Get())
+                var scope = new ManagementScope("root\\Microsoft\\HomeNet");
+                scope.Connect();
+
+                foreach (var type in new string[] { "HNet_ConnectionProperties", "HNet_Connection" })
                 {
-                    if ((bool)entry["IsIcsPrivate"])
-                        entry["IsIcsPrivate"] = false;
-                    if ((bool)entry["IsIcsPublic"])
-                        entry["IsIcsPublic"] = false;
-                    entry.Put(options);
+                    var query = new ObjectQuery("SELECT * FROM " + type);
+                    var srchr = new ManagementObjectSearcher(scope, query);
+                    foreach (ManagementObject entry in srchr.Get())
+                    {
+                        entry.Dispose();
+                        entry.Delete();
+                    }
+                }
+                {
+                    var options = new PutOptions();
+                    options.Type = PutType.UpdateOnly;
+
+                    var query = new ObjectQuery("SELECT * FROM HNet_ConnectionProperties");
+                    var srchr = new ManagementObjectSearcher(scope, query);
+                    foreach (ManagementObject entry in srchr.Get())
+                    {
+                        if ((bool)entry["IsIcsPrivate"])
+                            entry["IsIcsPrivate"] = false;
+                        if ((bool)entry["IsIcsPublic"])
+                            entry["IsIcsPublic"] = false;
+                        entry.Put(options);
+                    }
                 }
             }
         }

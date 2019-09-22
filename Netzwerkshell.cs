@@ -89,7 +89,7 @@ public class Netzwerkshell : IWlanRouter
         }
     }
 
-    public bool get_state()
+    public bool IsRunning()
     {
         return info("netsh", "wlan show hostednetwork").Length > 6;
     }
