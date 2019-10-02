@@ -1,4 +1,4 @@
-﻿using NETCONLib;
+using NETCONLib;
 using System;
 using System.Linq;
 using System.Windows;
@@ -31,6 +31,7 @@ namespace WlanRouter
         private Thread background;
         private Dispatcher background_dispatcher;
         private RegistryKey sharedaccess;
+        private RegistryKey tcpip;
 
         public MainWindow()
         {
@@ -72,6 +73,8 @@ namespace WlanRouter
             password_cleartext_switch.Click += (sender, e) => password_show_hide_click();
             sharedaccess = Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters", true);
             RouterIP.Text = sharedaccess.GetValue("ScopeAddress", "192.168.137.1").ToString();
+            tcpip = Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters", true);
+            Domain.Text = tcpip.GetValue("ICSDomain").ToString();
             refresh();
             control_btn_change(2, true);
         }
@@ -159,6 +162,7 @@ namespace WlanRouter
             var key = password_box.Password;
             var share = internet_sharing_box.SelectedIndex != 0 ? internet_sharing_box.SelectedValue.ToString().Split(Environment.NewLine.ToArray(), StringSplitOptions.None).Last() : null;
             sharedaccess.SetValue("ScopeAddress", RouterIP.Text);
+            tcpip.SetValue("ICSDomain", Domain.Text);
             await background_dispatcher.InvokeAsync(async () =>
             {
                 switch (ctrl_key_state)
