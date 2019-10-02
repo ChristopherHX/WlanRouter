@@ -9,6 +9,7 @@ using System.Windows.Threading;
 using System.Runtime.InteropServices;
 using System.Management;
 using System.Threading;
+using Microsoft.Win32;
 
 namespace WlanRouter
 {
@@ -29,6 +30,7 @@ namespace WlanRouter
         private bool ctrl_key_state = true;
         private Thread background;
         private Dispatcher background_dispatcher;
+        private RegistryKey sharedaccess;
 
         public MainWindow()
         {
@@ -68,8 +70,10 @@ namespace WlanRouter
             password_box.PasswordChanged += (sender, e) => input_changed();
             password_cleartext_box.TextChanged += (sender, e) => input_changed();
             password_cleartext_switch.Click += (sender, e) => password_show_hide_click();
+            sharedaccess = Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters", true);
+            RouterIP.Text = sharedaccess.GetValue("ScopeAddress", "192.168.137.1").ToString();
             refresh();
-            control_btn_change(2, true);            
+            control_btn_change(2, true);
         }
 
         private void refresh()
@@ -154,6 +158,7 @@ namespace WlanRouter
             var ssid = ssid_box.Text;
             var key = password_box.Password;
             var share = internet_sharing_box.SelectedIndex != 0 ? internet_sharing_box.SelectedValue.ToString().Split(Environment.NewLine.ToArray(), StringSplitOptions.None).Last() : null;
+            sharedaccess.SetValue("ScopeAddress", RouterIP.Text);
             await background_dispatcher.InvokeAsync(async () =>
             {
                 switch (ctrl_key_state)
