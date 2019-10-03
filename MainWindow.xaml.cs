@@ -1,4 +1,4 @@
-using NETCONLib;
+﻿using NETCONLib;
 using System;
 using System.Linq;
 using System.Windows;
@@ -270,13 +270,12 @@ namespace WlanRouter
 
         private void input_changed()
         {
-            Brush Brush_None = new SolidColorBrush();
-            Brush ssid_box_hint = new VisualBrush(new Label() { Content = SSID_HINT, Foreground = new SolidColorBrush(Colors.Gray) }) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, Viewbox = new Rect(0.0125, 0, 1, 1) };
-            Brush Passwort_hint = new VisualBrush(new Label() { Content = KEY_HINT, Foreground = new SolidColorBrush(Colors.Gray) }) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, Viewbox = new Rect(0.0125, 0, 1, 1) };
-            Brush Passwort_Info = new VisualBrush(new Label() { Content = String.Format(KEY_HINT_FORMAT, Convert.ToString(8 - (password_box.Visibility == Visibility.Visible && password_cleartext_box.Visibility != Visibility.Visible ? password_box.Password.Length : password_cleartext_box.Text.Length))), Foreground = new SolidColorBrush(Colors.Red) }) { Stretch = Stretch.None, AlignmentX = AlignmentX.Right, Viewbox = new Rect(0, 0.05, 1, 1) };
-            ssid_box.Background = ssid_box.Text.Length == 0 ? ssid_box_hint : Brush_None;
-            password_box.Background = password_box.Visibility == Visibility.Visible && password_box.Password.Length < 8 ? password_box.Password.Length == 0 ? Passwort_hint : Passwort_Info : Brush_None;
-            password_cleartext_box.Background = password_cleartext_box.Visibility == Visibility.Visible && password_cleartext_box.Text.Length < 8 ? password_cleartext_box.Text.Length == 0 ? Passwort_hint : Passwort_Info : Brush_None;
+            Brush default_background = new SolidColorBrush();
+            Brush ssid_placeholder = new VisualBrush(new Label() { Content = SSID_HINT, Foreground = new SolidColorBrush(Colors.Gray) }) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, Viewbox = new Rect(0.0125, 0, 1, 1) };
+            Brush password_placeholder = new VisualBrush(new Label() { Content = KEY_HINT, Foreground = new SolidColorBrush(Colors.Gray) }) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, Viewbox = new Rect(0.0125, 0, 1, 1) };
+            Brush password_hint = new VisualBrush(new Label() { Content = String.Format(KEY_HINT_FORMAT, Convert.ToString(8 - (password_box.Visibility == Visibility.Visible && password_cleartext_box.Visibility != Visibility.Visible ? password_box.Password.Length : password_cleartext_box.Text.Length))), Foreground = new SolidColorBrush(Colors.Red) }) { Stretch = Stretch.None, AlignmentX = AlignmentX.Right, Viewbox = new Rect(0, 0.05, 1, 1) };
+            ssid_box.Background = ssid_box.Text.Length == 0 ? ssid_placeholder : default_background;
+            password_box.Background = password_cleartext_box.Background = password_box.Visibility == Visibility.Visible && password_box.Password.Length < 8 ? password_box.Password.Length == 0 ? password_placeholder : password_hint : default_background;
             ctrl_key.IsEnabled = ctrl_key_state == true ? ((password_box.Visibility == Visibility.Visible && password_cleartext_box.Visibility != Visibility.Visible ? password_box.Password.Length >= 8 : password_cleartext_box.Text.Length >= 8) && ssid_box.Text.Length != 0) : true;
         }
 
