@@ -4,10 +4,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-public class Netzwerkshell : IWlanRouter {
+public class NetSh : IWlanRouter {
     private Encoding codepage;
 
-    public Netzwerkshell() {
+    public NetSh() {
         try {
             codepage = Encoding.GetEncoding(Convert.ToInt32(Microsoft.Win32.Registry.GetValue("HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage", "OEMCP", 437)));
         }
@@ -104,7 +104,7 @@ public class Netzwerkshell : IWlanRouter {
             throw new Exception("Error");
     }
 
-    ~Netzwerkshell() {
+    ~NetSh() {
         Stop();
     }
 }
