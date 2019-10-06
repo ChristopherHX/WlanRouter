@@ -6,15 +6,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace WlanRouter
-{
-    public partial class App : Application
-    {
-        // private void Application_Startup(object sender, StartupEventArgs e)
-        // {
+namespace WlanRouter {
+    public partial class App : Application {
+        // private void Application_Startup(object sender, StartupEventArgs e) {
         //     int verbose = 0;
-        //     var optionSet = new OptionSet
-        //     {
+        //     var optionSet = new OptionSet {
         //         { "v|verbose", "verbose output, repeat for more verbosity.",   
         //                 arg => verbose++ }
         //     };

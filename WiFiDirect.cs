@@ -31,8 +31,7 @@ public class WiFiDirect : IWlanRouter {
     public string Key { get => _publisher.Advertisement.LegacySettings.Passphrase.Password ?? ""; set => _publisher.Advertisement.LegacySettings.Passphrase.Password = value; }
 
     public void Start() {
-        if (!IsRunning())
-        {
+        if (!IsRunning()) {
             _publisher.Start();
         }
     }
@@ -42,8 +41,7 @@ public class WiFiDirect : IWlanRouter {
     }
 
     public void Stop() {
-        if (IsRunning())
-        {
+        if (IsRunning()) {
             _publisher.Stop();
         }
     }

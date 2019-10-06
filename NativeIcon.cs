@@ -8,8 +8,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-public class NativeIcon 
-{   
+public class NativeIcon {   
     [DllImport("shell32.dll")]
     private static extern IntPtr ExtractIcon(IntPtr hInst, string lpszExeFileName, int nIconIndex);
 

@@ -408,8 +408,7 @@ public unsafe class NativeWiFi : IWlanRouter {
         }
     }
 
-    public void Stop()
-    {
+    public void Stop() {
         unsafe {
             WLAN_HOSTED_NETWORK_REASON reason;
             if(WlanHostedNetworkForceStop(clientHandle, &reason, null) != 0) {
@@ -421,8 +420,7 @@ public unsafe class NativeWiFi : IWlanRouter {
     ~NativeWiFi() {
         Stop();
         if(clientHandle != 0) {
-            unsafe
-            {
+            unsafe {
                 WlanCloseHandle(clientHandle, null);                
             }
         }

@@ -4,12 +4,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-public class Netzwerkshell : IWlanRouter
-{
+public class Netzwerkshell : IWlanRouter {
     private Encoding codepage;
 
-    public Netzwerkshell()
-    {
+    public Netzwerkshell() {
         try {
             codepage = Encoding.GetEncoding(Convert.ToInt32(Microsoft.Win32.Registry.GetValue("HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage", "OEMCP", 437)));
         }
@@ -18,8 +16,7 @@ public class Netzwerkshell : IWlanRouter
         }
     }
 
-    private string cmd(string filename, string command)
-    {
+    private string cmd(string filename, string command) {
         Process cmd = new Process();
         cmd.StartInfo.UseShellExecute = false;
         cmd.StartInfo.RedirectStandardOutput = true;
@@ -35,8 +32,7 @@ public class Netzwerkshell : IWlanRouter
         return (code == 0) ? output : null;
     }
 
-    private string[] info(string filename, string command)
-    {
+    private string[] info(string filename, string command) {
         string Out = cmd(filename, command);
         if (Out != null)
         {
@@ -89,25 +85,21 @@ public class Netzwerkshell : IWlanRouter
         }
     }
 
-    public bool IsRunning()
-    {
+    public bool IsRunning() {
         return info("netsh", "wlan show hostednetwork").Length > 6;
     }
 
-    public string get_client_count()
-    {
+    public string get_client_count() {
         var result = info("netsh", "wlan show hostednetwork");
         return result[9] + "/" + result[2];
     }
 
-    public void Start()
-    {
+    public void Start() {
         if (cmd("netsh", "wlan start hostednetwork") == null)
             throw new Exception("Error");
     }
 
-    public void Stop()
-    {
+    public void Stop() {
         if (cmd("netsh", "wlan stop hostednetwork") == null)
             throw new Exception("Error");
     }
