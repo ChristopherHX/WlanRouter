@@ -76,7 +76,7 @@ namespace WlanRouter
             tcpip = Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters", true);
             Domain.Text = tcpip.GetValue("ICSDomain").ToString();
             refresh();
-            control_btn_change(2, true);
+            control_btn_change(2);
         }
 
         private void refresh()
@@ -95,7 +95,7 @@ namespace WlanRouter
                     {
                         string con_name = sharingManager.NetConnectionProps[con].Name + System.Environment.NewLine + sharingManager.NetConnectionProps[con].DeviceName;
                         internet_sharing_box.Items.Add(new ComboBoxItem { Content = con_name });
-                        control_btn_change(1, true);
+                        control_btn_change(1);
                     }
                     else
                     {
@@ -157,7 +157,7 @@ namespace WlanRouter
 
         private async void ctrl_button_click()
         {
-            control_btn_change(0, true);
+            control_btn_change(0);
             var ssid = ssid_box.Text;
             var key = password_box.Password;
             var share = internet_sharing_box.SelectedIndex != 0 ? internet_sharing_box.SelectedValue.ToString().Split(Environment.NewLine.ToArray(), StringSplitOptions.None).Last() : null;
@@ -190,7 +190,7 @@ namespace WlanRouter
                         {
                             await Dispatcher.InvokeAsync(() => {
                                 MessageBox.Show(ex.Message, FAILED, MessageBoxButton.OK);
-                                control_btn_change(2, true);
+                                control_btn_change(2);
                             }, DispatcherPriority.Normal);
                         }
                         await Dispatcher.InvokeAsync(refresh, DispatcherPriority.Normal);
@@ -202,14 +202,14 @@ namespace WlanRouter
                             router.Stop();
                             await Dispatcher.InvokeAsync(() => {
                                 refresh();
-                                control_btn_change(2, true);
+                                control_btn_change(2);
                             }, DispatcherPriority.Normal);
                         }
                         catch(Exception ex)
                         {
                             await Dispatcher.InvokeAsync(() => {
                                 MessageBox.Show(FAILDED_TO_STOP + System.Environment.NewLine + ex.Message, "Error", MessageBoxButton.OK);
-                                control_btn_change(1, true);
+                                control_btn_change(1);
                             }, DispatcherPriority.Normal);
                         }
                         break;
@@ -217,7 +217,7 @@ namespace WlanRouter
             },  DispatcherPriority.Normal);
         }
 
-        private void control_btn_change(int state, bool mode)
+        private void control_btn_change(int state)
         {
             switch (state)
             {
@@ -232,25 +232,23 @@ namespace WlanRouter
                         password_show_hide_click();
                     internet_sharing_box.IsEnabled = false;
                     password_box.IsEnabled = false;
+                    RouterIP.IsEnabled = false;
+                    Domain.IsEnabled = false;
                     break;
                 case 1:
                     ctrl_key_state = false;
                     ctrl_key.Content = STOP_WLAN_ROUTER;
                     ssid_box.IsReadOnly = true;
                     password_cleartext_box.IsReadOnly = true;
-                    if (mode)
-                    {
-                        password_cleartext_switch.IsEnabled = true;
-                        password_cleartext_box.IsEnabled = true;
-                        ssid_box.IsEnabled = true;
-                        ctrl_key.IsEnabled = true;
-                        Cursor = Cursors.Arrow;
-                    }
-                    else
-                    {
-                        internet_sharing_box.IsEnabled = false;
-                        password_box.IsEnabled = false;
-                    }
+                    internet_sharing_box.IsEnabled = false;
+                    password_box.IsEnabled = false;
+                    password_cleartext_switch.IsEnabled = true;
+                    password_cleartext_box.IsEnabled = false;
+                    ssid_box.IsEnabled = false;
+                    ctrl_key.IsEnabled = true;
+                    RouterIP.IsEnabled = false;
+                    Domain.IsEnabled = false;
+                    Cursor = Cursors.Arrow;
                     break;
                 case 2:
                     ctrl_key_state = true;
@@ -262,6 +260,8 @@ namespace WlanRouter
                     ssid_box.IsEnabled = true;
                     password_cleartext_box.IsEnabled = true;
                     password_box.IsEnabled = true;
+                    RouterIP.IsEnabled = true;
+                    Domain.IsEnabled = true;
                     ctrl_key.IsEnabled = true;
                     Cursor = Cursors.Arrow;
                     break;
