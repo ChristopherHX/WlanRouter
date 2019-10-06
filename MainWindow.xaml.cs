@@ -114,15 +114,15 @@ namespace WlanRouter
 
         private void DisableSharing()
         {
+            INetSharingManager sharingManager = new NetSharingManager();
+            foreach (var con in from INetSharingConfiguration conf in from INetConnection c in sharingManager.EnumEveryConnection
+                                select sharingManager.INetSharingConfigurationForINetConnection[c]
+                                where conf.SharingEnabled
+                                select conf) {
+                con.DisableSharing();
+            }
+
             if(router.IsRunning()) {
-                INetSharingManager sharingManager = new NetSharingManager();
-                foreach (var con in from INetSharingConfiguration conf in from INetConnection c in sharingManager.EnumEveryConnection
-                                    select sharingManager.INetSharingConfigurationForINetConnection[c]
-                                    where conf.SharingEnabled
-                                    select conf)
-                {
-                    con.DisableSharing();
-                }
 
                 var scope = new ManagementScope("root\\Microsoft\\HomeNet");
                 scope.Connect();
