@@ -129,10 +129,8 @@ namespace WlanRouter {
                     var query = new ObjectQuery("SELECT * FROM HNet_ConnectionProperties");
                     var srchr = new ManagementObjectSearcher(scope, query);
                     foreach (ManagementObject entry in srchr.Get()) {
-                        if ((bool)entry["IsIcsPrivate"])
-                            entry["IsIcsPrivate"] = false;
-                        if ((bool)entry["IsIcsPublic"])
-                            entry["IsIcsPublic"] = false;
+                        entry["IsIcsPrivate"] = false;
+                        entry["IsIcsPublic"] = false;
                         entry.Put(options);
                     }
                 }
