@@ -1,5 +1,7 @@
+using System.Threading.Tasks;
+
 public interface IRouter {
-    void Start();
+    Task Start();
     bool IsRunning();
-    void Stop();
+    Task Stop();
 }

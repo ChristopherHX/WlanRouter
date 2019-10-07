@@ -1,5 +1,6 @@
 ﻿using NETCONLib;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,18 +14,18 @@ using Microsoft.Win32;
 
 namespace WlanRouter {
     public partial class MainWindow : Window {
-        private static string TITLE = "Wlan Router";
+        private static string TITLE = "Router";
         private static string FAILED = "Failed";
         private static string UNSUPPORTED = "Unsupported";
         private static string NO_INTERNET_SHARING = "Keine Internetfreigabe";
         private static string FAILDED_TO_STOP = "Failed to stop hostednetwork";
-        private static string START_WLAN_ROUTER = "Wlan Router starten";
+        private static string START_WLAN_ROUTER = "Router starten";
         private static string WAIT = "Warten";
         private static string STOP_WLAN_ROUTER = "Wlan Router stoppen";
         private static string SSID_HINT = "Name (SSID) des Wlan Routers";
         private static string KEY_HINT = "Passwort (WPA2PSK) des Wlan Routers";
         private static string KEY_HINT_FORMAT = "(noch min {0} Zeichen)";
-        private IWlanRouter router;
+        private IRouter router;
         private bool ctrl_key_state = true;
         private Thread background;
         private Dispatcher background_dispatcher;
@@ -38,12 +39,25 @@ namespace WlanRouter {
             background = new Thread(new ThreadStart(() => {
                 try {
                     background_dispatcher = Dispatcher.CurrentDispatcher;
-                    router = (Environment.OSVersion.Version.Major >= 6 && Environment.OSVersion.Version.Minor > 1) ? (IWlanRouter)new WiFiDirect() : new NativeWiFi();
-                    var ssid = router.SSID;
-                    var key = router.Key;
+                    IList<Object> items = new List<Object>();
+                    try {
+                        items.Add(new RoutingProvider { Content = "NetSh", Router = new NetSh() });
+                        items.Add(new RoutingProvider { Content = "NativeWiFi", Router = new NativeWiFi() });
+                        items.Add(new RoutingProvider { Content = "WiFiDirect", Router = new WiFiDirect() });
+                        items.Add(new RoutingProvider { Content = "NetworkOperatorTetheringProvider", Router = new NetworkOperatorTetheringManager() });
+                    } catch {
+
+                    }
+                    
+                    // Router = (Environment.OSVersion.Version.Major >= 6 && Environment.OSVersion.Version.Minor > 1) ? (IWlanRouter)new WiFiDirect() : new NativeWiFi();
+                    // var ssid = Router.SSID;
+                    // var key = Router.Key;
                     uithread.InvokeAsync(() => {
-                        ssid_box.Text = ssid;
-                        password_box.Password = key;
+                    //     ssid_box.Text = ssid;
+                    //     password_box.Password = key;
+                        foreach(var item in items) {
+                            router_box.Items.Add(item);
+                        }
                     }, DispatcherPriority.Input);
                 }
                 catch (Exception ex) {
@@ -69,71 +83,37 @@ namespace WlanRouter {
             RouterIP.Text = sharedaccess.GetValue("ScopeAddress", "192.168.137.1").ToString();
             tcpip = Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters", true);
             Domain.Text = tcpip.GetValue("ICSDomain").ToString();
-            refresh();
-            control_btn_change(2);
+            router_box.SelectionChanged += (sender, e) => {
+                router = (router_box.SelectedItem as RoutingProvider)?.Router;
+                refresh();
+            };
+            internet_sharing_box.SelectionChanged += (sender, e) => {
+                var inetrouter = router as INetRouter;
+                if(inetrouter != null) {
+                    var selected = internet_sharing_box.SelectedValue as string;
+                    if(selected != null) {
+                        inetrouter.SetConnection(selected);
+                    }
+                }
+            };
         }
 
         private void refresh() {
             try {
                 internet_sharing_box.Items.Clear();
-                internet_sharing_box.Items.Add(new ComboBoxItem { Content = NO_INTERNET_SHARING });
-                internet_sharing_box.SelectedIndex = 0;
-                INetSharingManager sharingManager = new NetSharingManager();
-                foreach (var con in from INetConnection c in sharingManager.EnumEveryConnection
-                                    where sharingManager.NetConnectionProps[c].Status == tagNETCON_STATUS.NCS_CONNECTED
-                                    select c) {
-                    if (sharingManager.NetConnectionProps[con].DeviceName.StartsWith("Microsoft ")) {
-                        string con_name = sharingManager.NetConnectionProps[con].Name + System.Environment.NewLine + sharingManager.NetConnectionProps[con].DeviceName;
-                        internet_sharing_box.Items.Add(new ComboBoxItem { Content = con_name });
-                        control_btn_change(1);
+                var inetrouter = router as INetRouter;
+                if(inetrouter != null) {
+                    foreach (var item in inetrouter.GetConnections()) {
+                        internet_sharing_box.Items.Add(new ComboBoxItem { Content = item });
                     }
-                    else {
-                        string con_name = sharingManager.NetConnectionProps[con].Name + System.Environment.NewLine + sharingManager.NetConnectionProps[con].DeviceName;
-                        internet_sharing_box.Items.Add(new ComboBoxItem { Content = con_name });
-                        if (sharingManager.INetSharingConfigurationForINetConnection[con].SharingEnabled && sharingManager.INetSharingConfigurationForINetConnection[con].SharingConnectionType == tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC)
-                            internet_sharing_box.SelectedValue = con_name;
-                    }
+                } else {
+                    internet_sharing_box.Items.Add(new ComboBoxItem { Content = NO_INTERNET_SHARING });
                 }
+                internet_sharing_box.SelectedIndex = 0;
+                control_btn_change(router?.IsRunning() ?? false ? 1 : 2);
             }
             catch (Exception ex) {
                 MessageBox.Show(ex.Message + Environment.NewLine + ex.StackTrace, "Exception", MessageBoxButton.OK);
-            }
-        }
-
-        private void DisableSharing() {
-            INetSharingManager sharingManager = new NetSharingManager();
-            foreach (var con in from INetSharingConfiguration conf in from INetConnection c in sharingManager.EnumEveryConnection
-                                select sharingManager.INetSharingConfigurationForINetConnection[c]
-                                where conf.SharingEnabled
-                                select conf) {
-                con.DisableSharing();
-            }
-
-            if(router.IsRunning()) {
-
-                var scope = new ManagementScope("root\\Microsoft\\HomeNet");
-                scope.Connect();
-
-                foreach (var type in new string[] { "HNet_ConnectionProperties", "HNet_Connection" }) {
-                    var query = new ObjectQuery("SELECT * FROM " + type);
-                    var srchr = new ManagementObjectSearcher(scope, query);
-                    foreach (ManagementObject entry in srchr.Get()) {
-                        entry.Dispose();
-                        entry.Delete();
-                    }
-                }
-                {
-                    var options = new PutOptions();
-                    options.Type = PutType.UpdateOnly;
-
-                    var query = new ObjectQuery("SELECT * FROM HNet_ConnectionProperties");
-                    var srchr = new ManagementObjectSearcher(scope, query);
-                    foreach (ManagementObject entry in srchr.Get()) {
-                        entry["IsIcsPrivate"] = false;
-                        entry["IsIcsPublic"] = false;
-                        entry.Put(options);
-                    }
-                }
             }
         }
 
@@ -148,20 +128,12 @@ namespace WlanRouter {
                 switch (ctrl_key_state) {
                     case true:
                         try {
-                            router.SSID = ssid;
-                            router.Key = key;
-                            router.Start();
-                            DisableSharing();
-                            INetSharingManager sharingManager = new NetSharingManager();
-                            INetConnection Router = (from INetConnection con in sharingManager.EnumEveryConnection
-                                                     where sharingManager.NetConnectionProps[con].Status == tagNETCON_STATUS.NCS_CONNECTED
-                                                     where sharingManager.NetConnectionProps[con].DeviceName.StartsWith("Microsoft ")
-                                                     select con).First();
-                            if(share != null) {
-                                INetConnection Freigabe = (from INetConnection con in sharingManager.EnumEveryConnection where sharingManager.get_NetConnectionProps(con).DeviceName == share select con).First();                            
-                                sharingManager.INetSharingConfigurationForINetConnection[Freigabe].EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PUBLIC);
-                                sharingManager.INetSharingConfigurationForINetConnection[Router].EnableSharing(tagSHARINGCONNECTIONTYPE.ICSSHARINGTYPE_PRIVATE);
+                            var wrouter = router as IWlanRouter;
+                            if(wrouter != null) {
+                                wrouter.SSID = ssid;
+                                wrouter.Key = key;
                             }
+                            await router.Start();
                         }
                         catch (Exception ex) {
                             await Dispatcher.InvokeAsync(() => {
@@ -173,8 +145,7 @@ namespace WlanRouter {
                         break;
                     case false:
                         try {
-                            DisableSharing();
-                            router.Stop();
+                            await router.Stop();
                             await Dispatcher.InvokeAsync(() => {
                                 refresh();
                                 control_btn_change(2);
@@ -272,9 +243,8 @@ namespace WlanRouter {
             var ssid = ssid_box.Text;
             var key = password_box.Password;
             background_dispatcher.InvokeAsync(() => {
-                router.SSID = ssid;
-                router.Key = key;
-                DisableSharing();
+                // Router.SSID = ssid;
+                // Router.Key = key;
                 background_dispatcher.InvokeShutdown();
             }, DispatcherPriority.Normal);
         }

@@ -98,9 +98,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="IRouter.cs" />
+    <Compile Include="INetRouter.cs" />
     <Compile Include="IWlanRouter.cs" />
+    <Compile Include="RoutingProvider.cs" />
     <Compile Include="NativeIcon.cs" />
     <Compile Include="WiFiDirect.cs" />
+    <Compile Include="NetworkOperatorTetheringManager.cs" />
     <Compile Include="NativeWiFi.cs" />
     <Compile Include="NetSh.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">

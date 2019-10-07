@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 public class NetSh : IWlanRouter {
     private Encoding codepage;
@@ -94,12 +95,12 @@ public class NetSh : IWlanRouter {
         return result[9] + "/" + result[2];
     }
 
-    public void Start() {
+    public async Task Start() {
         if (cmd("netsh", "wlan start hostednetwork") == null)
             throw new Exception("Error");
     }
 
-    public void Stop() {
+    public async Task Stop() {
         if (cmd("netsh", "wlan stop hostednetwork") == null)
             throw new Exception("Error");
     }

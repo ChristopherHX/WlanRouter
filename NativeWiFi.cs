@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using DWORD = System.Int32;
 using HANDLE = System.Int32;
@@ -375,7 +376,7 @@ public unsafe class NativeWiFi : IWlanRouter {
                     ptr[i] = (byte)value[i];
                 }
                 ptr[value.Length] = 0;
-                DWORD ret = WlanHostedNetworkSetSecondaryKey(clientHandle, value.Length  + 1, ptr/* Encoding.ASCII.GetBytes(value) */, true, true, &reason, null);
+                DWORD ret = WlanHostedNetworkSetSecondaryKey(clientHandle, value.Length + 1, ptr/* Encoding.ASCII.GetBytes(value) */, true, true, &reason, null);
                 Marshal.FreeHGlobal((IntPtr)ptr);
                 if(ret != 0) {
                     throw new Exception("WlanHostedNetworkSetSecondaryKey failed with (" + reason + ")");
@@ -384,7 +385,7 @@ public unsafe class NativeWiFi : IWlanRouter {
         }
     }
 
-    public void Start()
+    public async Task Start()
     {
         unsafe {
             WLAN_HOSTED_NETWORK_REASON reason;
@@ -408,7 +409,7 @@ public unsafe class NativeWiFi : IWlanRouter {
         }
     }
 
-    public void Stop() {
+    public async Task Stop() {
         unsafe {
             WLAN_HOSTED_NETWORK_REASON reason;
             if(WlanHostedNetworkForceStop(clientHandle, &reason, null) != 0) {
@@ -418,7 +419,7 @@ public unsafe class NativeWiFi : IWlanRouter {
     }
 
     ~NativeWiFi() {
-        Stop();
+        Stop().RunSynchronously();
         if(clientHandle != 0) {
             unsafe {
                 WlanCloseHandle(clientHandle, null);                
