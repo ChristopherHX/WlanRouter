@@ -1,5 +1,4 @@
-﻿using NETCONLib;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -7,8 +6,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using System.Runtime.InteropServices;
-using System.Management;
 using System.Threading;
 using Microsoft.Win32;
 
@@ -41,9 +38,9 @@ namespace WlanRouter {
                     background_dispatcher = Dispatcher.CurrentDispatcher;
                     IList<Object> items = new List<Object>();
                     try {
-                        items.Add(new RoutingProvider { Content = "NetSh", Router = new NetSh() });
-                        items.Add(new RoutingProvider { Content = "NativeWiFi", Router = new NativeWiFi() });
-                        items.Add(new RoutingProvider { Content = "WiFiDirect", Router = new WiFiDirect() });
+                        items.Add(new RoutingProvider { Content = "NetSh + NetCon", Router = new WlanRouterWrapper(new NetSh(), new NetCon()) });
+                        items.Add(new RoutingProvider { Content = "NativeWiFi + NetCon", Router = new WlanRouterWrapper(new NativeWiFi(), new NetCon()) });
+                        items.Add(new RoutingProvider { Content = "WiFiDirect + NetCon", Router = new WlanRouterWrapper(new WiFiDirect(), new NetCon()) });
                         items.Add(new RoutingProvider { Content = "NetworkOperatorTetheringProvider", Router = new NetworkOperatorTetheringManager() });
                     } catch {
 
@@ -121,7 +118,6 @@ namespace WlanRouter {
             control_btn_change(0);
             var ssid = ssid_box.Text;
             var key = password_box.Password;
-            var share = internet_sharing_box.SelectedIndex != 0 ? internet_sharing_box.SelectedValue.ToString().Split(Environment.NewLine.ToArray(), StringSplitOptions.None).Last() : null;
             sharedaccess.SetValue("ScopeAddress", RouterIP.Text);
             tcpip.SetValue("ICSDomain", Domain.Text);
             await background_dispatcher.InvokeAsync(async () => {

@@ -1,26 +1,55 @@
+using NETCONLib;
+using System.Linq;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
+using System.Management;
+
 public class NetCon : INetRouter {
+    public struct Connection {
+        public string Name;
+        public string DeviceName;
+    }
+
     private INetConnection[] endpoints = new INetConnection[2];
 
     public NetCon() {
 
     }
 
-    public string[] GetConnections() {
+    string[] INetRouter.GetConnections() {
         INetSharingManager sharingManager = new NetSharingManager();
-        (from INetConnection c in sharingManager.EnumEveryConnection
+        return (from INetConnection c in sharingManager.EnumEveryConnection
                                     where sharingManager.NetConnectionProps[c].Status == tagNETCON_STATUS.NCS_CONNECTED
                                     select sharingManager.NetConnectionProps[c].Name + System.Environment.NewLine + sharingManager.NetConnectionProps[c].DeviceName).ToArray();
+    }
+
+    public static Connection[] GetConnections() {
+        INetSharingManager sharingManager = new NetSharingManager();
+        return (from INetConnection c in sharingManager.EnumEveryConnection
+                                    where sharingManager.NetConnectionProps[c].Status == tagNETCON_STATUS.NCS_CONNECTED
+                                    select new Connection { Name = sharingManager.NetConnectionProps[c].Name, DeviceName = sharingManager.NetConnectionProps[c].DeviceName}).ToArray();
     }
 
     // public string GetConnection() {
     //     ret
     // }
 
-    public void SetConnection(string name) {
+    public void SetPrivateConnection(Connection connection) {
         INetSharingManager sharingManager = new NetSharingManager();
-        endpoints[1] = (from INetConnection con in sharingManager.EnumEveryConnection where sharingManager.get_NetConnectionProps(con).DeviceName == share select con).First();                            
+        endpoints[0] = (from INetConnection con in sharingManager.EnumEveryConnection where sharingManager.get_NetConnectionProps(con).DeviceName == connection.DeviceName select con).First();                            
     }
+
+    void INetRouter.SetConnection(string name) {
+        var desc = name.Split(System.Environment.NewLine[0]);
+        INetSharingManager sharingManager = new NetSharingManager();
+        endpoints[1] = (from INetConnection con in sharingManager.EnumEveryConnection where sharingManager.get_NetConnectionProps(con).Name == desc[0] select con).FirstOrDefault();                            
+    }
+
+    public void SetConnection(Connection connection) {
+        INetSharingManager sharingManager = new NetSharingManager();
+        endpoints[1] = (from INetConnection con in sharingManager.EnumEveryConnection where sharingManager.get_NetConnectionProps(con).Name == connection.Name select con).First();                            
+    }
+
 
     public async Task Start() {
         Stop();
@@ -63,5 +92,10 @@ public class NetCon : INetRouter {
                 entry.Put(options);
             }
         }
+    }
+
+    public bool IsRunning() {
+        INetSharingManager sharingManager = new NetSharingManager();
+        return endpoints[0] != null && sharingManager.INetSharingConfigurationForINetConnection[endpoints[0]].SharingEnabled && endpoints[1] != null && sharingManager.INetSharingConfigurationForINetConnection[endpoints[1]].SharingEnabled;
     }
 }

@@ -106,6 +106,8 @@
     <Compile Include="NetworkOperatorTetheringManager.cs" />
     <Compile Include="NativeWiFi.cs" />
     <Compile Include="NetSh.cs" />
+    <Compile Include="NetCon.cs" />
+    <Compile Include="WlanRouterWrapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>

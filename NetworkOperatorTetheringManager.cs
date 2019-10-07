@@ -10,7 +10,7 @@ public class NetworkOperatorTetheringManager : IWlanRouter, INetRouter {
     }
 
     public string[] GetConnections() {
-        return (from c in NetworkInformation.GetConnectionProfiles() select c.ProfileName + System.Environment.NewLine + c.NetworkAdapter.NetworkAdapterId.ToString()).ToArray();
+        return (from c in NetworkInformation.GetConnectionProfiles() where c.GetNetworkConnectivityLevel() != NetworkConnectivityLevel.None select c.ProfileName + System.Environment.NewLine + c.NetworkAdapter.NetworkAdapterId.ToString()).ToArray();
     }
 
     public void SetConnection(string name) {

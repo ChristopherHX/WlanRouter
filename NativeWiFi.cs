@@ -419,7 +419,7 @@ public unsafe class NativeWiFi : IWlanRouter {
     }
 
     ~NativeWiFi() {
-        Stop().RunSynchronously();
+        Stop();
         if(clientHandle != 0) {
             unsafe {
                 WlanCloseHandle(clientHandle, null);                
