@@ -6,7 +6,10 @@ using Windows.Networking.Connectivity;
 public class NetworkOperatorTetheringManager : IWlanRouter, INetRouter {
     private Windows.Networking.NetworkOperators.NetworkOperatorTetheringManager manager = null;
     public NetworkOperatorTetheringManager() {
-
+        manager = Windows.Networking.NetworkOperators.NetworkOperatorTetheringManager.CreateFromConnectionProfile(NetworkInformation.GetConnectionProfiles()[0]);
+        var config = manager.GetCurrentAccessPointConfiguration();
+        SSID = config.Ssid;
+        Key = config.Passphrase;
     }
 
     public string[] GetConnections() {

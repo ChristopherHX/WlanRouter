@@ -28,10 +28,12 @@ namespace WlanRouter {
         private Dispatcher background_dispatcher;
         private int inetcon = 0;
         private bool inrefresh = false;
+        private NetworkAddressChangedEventHandler addressChangedEventHandler;
 
         public MainWindow() {
             InitializeComponent();
             Title = TITLE;
+            addressChangedEventHandler = addressChangedEventHandler = (sender, arg) => Dispatcher.InvokeAsync(refresh, DispatcherPriority.Input);
             control_btn_change(0);
             var uithread = Dispatcher;
             background = new Thread(new ThreadStart(() => {
@@ -51,7 +53,7 @@ namespace WlanRouter {
                     // Router = (Environment.OSVersion.Version.Major >= 6 && Environment.OSVersion.Version.Minor > 1) ? (IWlanRouter)new WiFiDirect() : new NativeWiFi();
                     // var ssid = Router.SSID;
                     // var key = Router.Key;
-                    NetworkChange.NetworkAddressChanged += (sender, arg) => uithread.InvokeAsync(refresh, DispatcherPriority.Input);
+                    NetworkChange.NetworkAddressChanged += addressChangedEventHandler;
                     uithread.InvokeAsync(() => {
                     //     ssid_box.Text = ssid;
                     //     password_box.Password = key;
@@ -59,7 +61,6 @@ namespace WlanRouter {
                             router_box.Items.Add(item);
                         }
                         router_box.SelectionChanged += (sender, e) => {
-                            if(inrefresh) return;
                             router = (router_box.SelectedItem as RoutingProvider)?.Router;
                             ssid_box.Visibility = router is IWlanRouter ? Visibility.Visible : Visibility.Collapsed;
                             password.Visibility = router is IWlanRouter ? Visibility.Visible : Visibility.Collapsed;
@@ -80,7 +81,7 @@ namespace WlanRouter {
                             }
                             refresh();
                         };
-                        router_box.SelectedIndex = 0;
+                        router_box.SelectedIndex = router_box.Items.Count - 1;
                     }, DispatcherPriority.Input);
                 }
                 catch (Exception ex) {
@@ -105,8 +106,10 @@ namespace WlanRouter {
         }
 
         private async void refresh() {
+            if(inrefresh) return;
             inrefresh = true;
             try {
+                control_btn_change(router?.IsRunning() ?? false ? 1 : 2);
                 if(router_box.IsEnabled)
                 {
                     var i = router_box.SelectedIndex;
@@ -120,27 +123,28 @@ namespace WlanRouter {
                     }
                     router_box.SelectedIndex = i;
                 }
-                var inetrouter = router as INetRouter;
-                if(inetrouter != null) {
-                    string[] cons = null;
-                    await background_dispatcher.InvokeAsync(() => {
-                        cons = inetrouter.GetConnections();
-                    }, DispatcherPriority.Normal);
-                    var i = internet_sharing_box.SelectedIndex;
-                    internet_sharing_box.Items.Clear();
-                    foreach (var item in cons) {
-                        internet_sharing_box.Items.Add(new ComboBoxItem { Content = item });
+                if(internet_sharing_box.IsEnabled) {
+                    var inetrouter = router as INetRouter;
+                    if(inetrouter != null) {
+                        string[] cons = null;
+                        await background_dispatcher.InvokeAsync(() => {
+                            cons = inetrouter.GetConnections();
+                        }, DispatcherPriority.Normal);
+                        var i = internet_sharing_box.SelectedIndex;
+                        internet_sharing_box.Items.Clear();
+                        foreach (var item in cons) {
+                            internet_sharing_box.Items.Add(new ComboBoxItem { Content = item });
+                        }
+                        if(i == -1 || i >= cons.Length) {
+                            i = 0;
+                        }
+                        internet_sharing_box.SelectedIndex = i;
+                    } else {
+                        internet_sharing_box.Items.Clear();
+                        internet_sharing_box.Items.Add(new ComboBoxItem { Content = NO_INTERNET_SHARING });
+                        internet_sharing_box.SelectedIndex = 0;
                     }
-                    if(i == -1 || i >= cons.Length) {
-                        i = 0;
-                    }
-                    internet_sharing_box.SelectedIndex = i;
-                } else {
-                    internet_sharing_box.Items.Clear();
-                    internet_sharing_box.Items.Add(new ComboBoxItem { Content = NO_INTERNET_SHARING });
-                    internet_sharing_box.SelectedIndex = 0;
                 }
-                control_btn_change(router?.IsRunning() ?? false ? 1 : 2);
             }
             catch (Exception ex) {
                 MessageBox.Show(ex.Message + Environment.NewLine + ex.StackTrace, "Exception", MessageBoxButton.OK);
@@ -204,6 +208,7 @@ namespace WlanRouter {
         private void control_btn_change(int state) {
             switch (state) {
                 case 0:
+                    NetworkChange.NetworkAddressChanged -= addressChangedEventHandler;
                     Cursor = Cursors.Wait;
                     ctrl_key.IsEnabled = false;
                     ctrl_key.Content = WAIT;
@@ -219,6 +224,7 @@ namespace WlanRouter {
                     Domain.IsEnabled = false;
                     break;
                 case 1:
+                    NetworkChange.NetworkAddressChanged += addressChangedEventHandler;
                     ctrl_key_state = false;
                     ctrl_key.Content = STOP_WLAN_ROUTER;
                     ssid_box.IsEnabled = true;
@@ -235,6 +241,7 @@ namespace WlanRouter {
                     Cursor = Cursors.Arrow;
                     break;
                 case 2:
+                    NetworkChange.NetworkAddressChanged += addressChangedEventHandler;
                     ctrl_key_state = true;
                     ctrl_key.Content = START_WLAN_ROUTER;
                     ssid_box.IsReadOnly = false;
