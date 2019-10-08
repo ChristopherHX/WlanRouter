@@ -16,10 +16,10 @@
         </Grid.RowDefinitions>
         <Button Grid.Row="0" x:Name="ctrl_key" Margin="2.5" FontSize="20"/>
         <StackPanel Grid.Row="1">
-            <ComboBox x:Name="router_box" SelectedValuePath="Content" DisplayMemberPath="Content" SelectedIndex="0" VerticalAlignment="Stretch" Margin="2.5" FontSize="14.667"/>
+            <ComboBox x:Name="router_box" SelectedValuePath="Content" DisplayMemberPath="Content" VerticalAlignment="Stretch" Margin="2.5" FontSize="14.667"/>
             <ComboBox x:Name="internet_sharing_box" SelectedValuePath="Content" SelectedIndex="0" VerticalAlignment="Stretch" Margin="2.5" FontSize="14.667"/>
             <TextBox x:Name="ssid_box" TextWrapping="NoWrap" FontSize="16" VerticalAlignment="Stretch" Margin="2.5" MaxLines="1" IsUndoEnabled="True"/>
-            <Grid>
+            <Grid x:Name="password">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="auto" />

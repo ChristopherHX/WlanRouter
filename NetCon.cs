@@ -3,17 +3,21 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Management;
+using Microsoft.Win32;
 
-public class NetCon : INetRouter {
+public class NetCon : INetRouter, IRouterDomain, IRouterScope {
     public struct Connection {
         public string Name;
         public string DeviceName;
     }
 
     private INetConnection[] endpoints = new INetConnection[2];
+    private RegistryKey sharedaccess;
+    private RegistryKey tcpip;
 
     public NetCon() {
-
+        tcpip = Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters", true);
+        sharedaccess = Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters", true);
     }
 
     string[] INetRouter.GetConnections() {
@@ -97,5 +101,15 @@ public class NetCon : INetRouter {
     public bool IsRunning() {
         INetSharingManager sharingManager = new NetSharingManager();
         return endpoints[0] != null && sharingManager.INetSharingConfigurationForINetConnection[endpoints[0]].SharingEnabled && endpoints[1] != null && sharingManager.INetSharingConfigurationForINetConnection[endpoints[1]].SharingEnabled;
+    }
+
+    public string Scope {
+        get => sharedaccess.GetValue("ScopeAddress", "192.168.137.1").ToString();
+        set => sharedaccess.SetValue("ScopeAddress", value);
+    }
+
+    public string Domain {
+        get => tcpip.GetValue("ICSDomain", "").ToString();
+        set => tcpip.SetValue("ICSDomain", value);
     }
 }

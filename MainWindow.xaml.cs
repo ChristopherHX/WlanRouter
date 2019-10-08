@@ -7,7 +7,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using System.Threading;
-using Microsoft.Win32;
 
 namespace WlanRouter {
     public partial class MainWindow : Window {
@@ -26,12 +25,13 @@ namespace WlanRouter {
         private bool ctrl_key_state = true;
         private Thread background;
         private Dispatcher background_dispatcher;
-        private RegistryKey sharedaccess;
-        private RegistryKey tcpip;
+        private int inetcon = 0;
+        private bool inrefresh = false;
 
         public MainWindow() {
             InitializeComponent();
             Title = TITLE;
+            control_btn_change(0);
             var uithread = Dispatcher;
             background = new Thread(new ThreadStart(() => {
                 try {
@@ -41,7 +41,8 @@ namespace WlanRouter {
                         items.Add(new RoutingProvider { Content = "NetSh + NetCon", Router = new WlanRouterWrapper(new NetSh(), new NetCon()) });
                         items.Add(new RoutingProvider { Content = "NativeWiFi + NetCon", Router = new WlanRouterWrapper(new NativeWiFi(), new NetCon()) });
                         items.Add(new RoutingProvider { Content = "WiFiDirect + NetCon", Router = new WlanRouterWrapper(new WiFiDirect(), new NetCon()) });
-                        items.Add(new RoutingProvider { Content = "NetworkOperatorTetheringProvider", Router = new NetworkOperatorTetheringManager() });
+                        items.Add(new RoutingProvider { Content = "NetworkOperatorTetheringManager", Router = new NetworkOperatorTetheringManager() });
+                        inetcon = items.Count;
                     } catch {
 
                     }
@@ -55,6 +56,29 @@ namespace WlanRouter {
                         foreach(var item in items) {
                             router_box.Items.Add(item);
                         }
+                        router_box.SelectionChanged += (sender, e) => {
+                            if(inrefresh) return;
+                            router = (router_box.SelectedItem as RoutingProvider)?.Router;
+                            ssid_box.Visibility = router is IWlanRouter ? Visibility.Visible : Visibility.Collapsed;
+                            password.Visibility = router is IWlanRouter ? Visibility.Visible : Visibility.Collapsed;
+                            RouterIP.Visibility = router is IRouterScope ? Visibility.Visible : Visibility.Collapsed;
+                            Domain.Visibility = router is IRouterDomain ? Visibility.Visible : Visibility.Collapsed;
+                            if(ssid_box.Text.Length == 0) {
+                                ssid_box.Text = (router as IWlanRouter)?.SSID ?? "";
+                            }
+                            if(password_box.Password.Length == 0 && password_cleartext_box.Text.Length == 0) {
+                                password_box.Password = (router as IWlanRouter)?.Key ?? "";
+                                password_cleartext_box.Text = (router as IWlanRouter)?.Key ?? "";
+                            }
+                            if(RouterIP.Text.Length == 0) {
+                                RouterIP.Text = (router as IRouterScope)?.Scope ?? "";
+                            }
+                            if(Domain.Text.Length == 0) {
+                                Domain.Text = (router as IRouterDomain)?.Domain ?? "";
+                            }
+                            refresh();
+                        };
+                        router_box.SelectedIndex = 0;                        
                     }, DispatcherPriority.Input);
                 }
                 catch (Exception ex) {
@@ -76,50 +100,58 @@ namespace WlanRouter {
             password_box.PasswordChanged += (sender, e) => input_changed();
             password_cleartext_box.TextChanged += (sender, e) => input_changed();
             password_cleartext_switch.Click += (sender, e) => password_show_hide_click();
-            sharedaccess = Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Services\\SharedAccess\\Parameters", true);
-            RouterIP.Text = sharedaccess.GetValue("ScopeAddress", "192.168.137.1").ToString();
-            tcpip = Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters", true);
-            Domain.Text = tcpip.GetValue("ICSDomain").ToString();
-            router_box.SelectionChanged += (sender, e) => {
-                router = (router_box.SelectedItem as RoutingProvider)?.Router;
-                refresh();
-            };
-            internet_sharing_box.SelectionChanged += (sender, e) => {
-                var inetrouter = router as INetRouter;
-                if(inetrouter != null) {
-                    var selected = internet_sharing_box.SelectedValue as string;
-                    if(selected != null) {
-                        inetrouter.SetConnection(selected);
-                    }
-                }
-            };
         }
 
         private void refresh() {
+            inrefresh = true;
             try {
-                internet_sharing_box.Items.Clear();
+                {
+                    var i = router_box.SelectedIndex;
+                    while(inetcon < router_box.Items.Count) {
+                        router_box.Items.RemoveAt(inetcon);
+                    }
+                    foreach (var item in NetCon.GetConnections()) {
+                        var netcon = new NetCon();
+                        netcon.SetPrivateConnection(item);
+                        router_box.Items.Add(new RoutingProvider { Content = item.Name + " (NetCon Router)", Router = netcon });                            
+                    }
+                    router_box.SelectedIndex = i;
+                }
                 var inetrouter = router as INetRouter;
                 if(inetrouter != null) {
-                    foreach (var item in inetrouter.GetConnections()) {
+                    var cons = inetrouter.GetConnections();
+                    var i = internet_sharing_box.SelectedIndex;
+                    internet_sharing_box.Items.Clear();
+                    foreach (var item in cons) {
                         internet_sharing_box.Items.Add(new ComboBoxItem { Content = item });
                     }
+                    if(i == -1 || i >= cons.Length) {
+                        i = 0;
+                    }
+                    internet_sharing_box.SelectedIndex = i;
                 } else {
+                    internet_sharing_box.Items.Clear();
                     internet_sharing_box.Items.Add(new ComboBoxItem { Content = NO_INTERNET_SHARING });
+                    internet_sharing_box.SelectedIndex = 0;
                 }
-                internet_sharing_box.SelectedIndex = 0;
                 control_btn_change(router?.IsRunning() ?? false ? 1 : 2);
             }
             catch (Exception ex) {
                 MessageBox.Show(ex.Message + Environment.NewLine + ex.StackTrace, "Exception", MessageBoxButton.OK);
             }
+            inrefresh = false;
         }
 
         private async void ctrl_button_click() {
             control_btn_change(0);
             var ssid = ssid_box.Text;
             var key = password_box.Password;
-            sharedaccess.SetValue("ScopeAddress", RouterIP.Text);
-            tcpip.SetValue("ICSDomain", Domain.Text);
+            if(router is IRouterScope) {
+                (router as IRouterScope).Scope = RouterIP.Text;
+            }
+            if(router is IRouterDomain) {
+                (router as IRouterDomain).Domain = Domain.Text;
+            }
             await background_dispatcher.InvokeAsync(async () => {
                 switch (ctrl_key_state) {
                     case true:
@@ -169,6 +201,7 @@ namespace WlanRouter {
                     password_cleartext_box.IsEnabled = false;
                     if (password_cleartext_box.IsVisible)
                         password_show_hide_click();
+                    router_box.IsEnabled = false;
                     internet_sharing_box.IsEnabled = false;
                     password_box.IsEnabled = false;
                     RouterIP.IsEnabled = false;
@@ -177,13 +210,14 @@ namespace WlanRouter {
                 case 1:
                     ctrl_key_state = false;
                     ctrl_key.Content = STOP_WLAN_ROUTER;
+                    ssid_box.IsEnabled = true;
                     ssid_box.IsReadOnly = true;
+                    password_cleartext_box.IsEnabled = true;
                     password_cleartext_box.IsReadOnly = true;
                     internet_sharing_box.IsEnabled = false;
+                    router_box.IsEnabled = false;
                     password_box.IsEnabled = false;
                     password_cleartext_switch.IsEnabled = true;
-                    password_cleartext_box.IsEnabled = false;
-                    ssid_box.IsEnabled = false;
                     ctrl_key.IsEnabled = true;
                     RouterIP.IsEnabled = false;
                     Domain.IsEnabled = false;
@@ -195,6 +229,7 @@ namespace WlanRouter {
                     ssid_box.IsReadOnly = false;
                     password_cleartext_box.IsReadOnly = false;
                     internet_sharing_box.IsEnabled = true;
+                    router_box.IsEnabled = true;
                     password_cleartext_switch.IsEnabled = true;
                     ssid_box.IsEnabled = true;
                     password_cleartext_box.IsEnabled = true;
@@ -215,7 +250,7 @@ namespace WlanRouter {
             ssid_box.Background = ssid_box.Text.Length == 0 ? ssid_placeholder : default_background;
             var length = password_box.Visibility == Visibility.Visible ? password_box.Password.Length : password_cleartext_box.Text.Length;
             password_box.Background = password_cleartext_box.Background = length < 8 ? length == 0 ? password_placeholder : password_hint : default_background;
-            ctrl_key.IsEnabled = ctrl_key_state == true ? ((password_box.Visibility == Visibility.Visible && password_cleartext_box.Visibility != Visibility.Visible ? password_box.Password.Length >= 8 : password_cleartext_box.Text.Length >= 8) && ssid_box.Text.Length != 0) : true;
+            ctrl_key.IsEnabled = ctrl_key_state ? length >= 8 && ssid_box.Text.Length != 0 : true;
         }
 
         private void password_show_hide_click() {

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-public class WlanRouterWrapper : IWlanRouter, INetRouter {
+public class WlanRouterWrapper : IWlanRouter, INetRouter, IRouterDomain, IRouterScope {
     private IWlanRouter wrouter;
     private NetCon netcon;
 
@@ -45,5 +45,15 @@ public class WlanRouterWrapper : IWlanRouter, INetRouter {
 
     public void SetConnection(string name) {
         ((INetRouter)netcon).SetConnection(name);
+    }
+
+    public string Scope {
+        get => netcon.Scope;
+        set => netcon.Scope = value;
+    }
+
+    public string Domain {
+        get => netcon.Domain;
+        set => netcon.Domain = value;
     }
 }
