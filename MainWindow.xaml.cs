@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -50,6 +51,7 @@ namespace WlanRouter {
                     // Router = (Environment.OSVersion.Version.Major >= 6 && Environment.OSVersion.Version.Minor > 1) ? (IWlanRouter)new WiFiDirect() : new NativeWiFi();
                     // var ssid = Router.SSID;
                     // var key = Router.Key;
+                    NetworkChange.NetworkAddressChanged += (sender, arg) => uithread.InvokeAsync(refresh, DispatcherPriority.Input);
                     uithread.InvokeAsync(() => {
                     //     ssid_box.Text = ssid;
                     //     password_box.Password = key;
@@ -78,7 +80,7 @@ namespace WlanRouter {
                             }
                             refresh();
                         };
-                        router_box.SelectedIndex = 0;                        
+                        router_box.SelectedIndex = 0;
                     }, DispatcherPriority.Input);
                 }
                 catch (Exception ex) {
@@ -102,9 +104,10 @@ namespace WlanRouter {
             password_cleartext_switch.Click += (sender, e) => password_show_hide_click();
         }
 
-        private void refresh() {
+        private async void refresh() {
             inrefresh = true;
             try {
+                if(router_box.IsEnabled)
                 {
                     var i = router_box.SelectedIndex;
                     while(inetcon < router_box.Items.Count) {
@@ -119,7 +122,10 @@ namespace WlanRouter {
                 }
                 var inetrouter = router as INetRouter;
                 if(inetrouter != null) {
-                    var cons = inetrouter.GetConnections();
+                    string[] cons = null;
+                    await background_dispatcher.InvokeAsync(() => {
+                        cons = inetrouter.GetConnections();
+                    }, DispatcherPriority.Normal);
                     var i = internet_sharing_box.SelectedIndex;
                     internet_sharing_box.Items.Clear();
                     foreach (var item in cons) {
@@ -152,10 +158,15 @@ namespace WlanRouter {
             if(router is IRouterDomain) {
                 (router as IRouterDomain).Domain = Domain.Text;
             }
+            var share = internet_sharing_box.SelectedValue as string;
             await background_dispatcher.InvokeAsync(async () => {
                 switch (ctrl_key_state) {
                     case true:
                         try {
+                            var inetrouter = router as INetRouter;
+                            if(inetrouter != null) {
+                                inetrouter.SetConnection(share);
+                            }
                             var wrouter = router as IWlanRouter;
                             if(wrouter != null) {
                                 wrouter.SSID = ssid;
