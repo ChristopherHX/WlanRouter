@@ -5,25 +5,34 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WlanRouter"
         mc:Ignorable="d"
-        MinWidth="320" Width="320" MinHeight="240" Height="240" Closing="Window_Closing">
-    <Grid>
+        MinWidth="320" Width="320" MinHeight="300" Height="300" Closing="Window_Closing">
+    <Grid Margin="2.5">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="auto" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
         </Grid.RowDefinitions>
-        <Button Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" x:Name="ctrl_key" Margin="5,5,5,2.5" FontSize="20"/>
-        <ComboBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="internet_sharing_box" SelectedValuePath="Content" SelectedIndex="0" VerticalAlignment="Stretch" Margin="5,2.5,5,2.5" FontSize="14.667"/>
-        <TextBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" x:Name="ssid_box" TextWrapping="NoWrap" FontSize="16" VerticalAlignment="Stretch" Margin="5,2.5,5,2.5" MaxLines="1" IsUndoEnabled="True"/>
-        <PasswordBox Grid.Row="3" Grid.Column="0" x:Name="password_box" FontSize="16" VerticalAlignment="Stretch" Margin="5,2.5,2.5,5"/>
-        <TextBox Grid.Row="3" Grid.Column="0" x:Name="password_cleartext_box" Visibility="Collapsed" FontSize="16" VerticalAlignment="Stretch" Margin="5,2.5,2.5,5"/>
-        <Button Grid.Row="3" Grid.Column="1" x:Name="password_cleartext_switch" VerticalAlignment="Stretch" Margin="2.5,2.5,5,5" Content="abc"/>
-        <TextBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" x:Name="RouterIP" TextWrapping="NoWrap" FontSize="16" VerticalAlignment="Bottom" Margin="5,2.5,2.5,5" MaxLines="1" IsUndoEnabled="False"/>
+        <Button Grid.Row="0" x:Name="ctrl_key" Margin="2.5" FontSize="20"/>
+        <StackPanel Grid.Row="1">
+            <ComboBox x:Name="router_box" SelectedValuePath="Content" DisplayMemberPath="Content" VerticalAlignment="Stretch" Margin="2.5" FontSize="14.667"/>
+            <ComboBox x:Name="internet_sharing_box" SelectedValuePath="Content" SelectedIndex="0" VerticalAlignment="Stretch" Margin="2.5" FontSize="14.667"/>
+            <TextBox x:Name="ssid_box" TextWrapping="NoWrap" FontSize="16" VerticalAlignment="Stretch" Margin="2.5" MaxLines="1" IsUndoEnabled="True"/>
+            <Grid x:Name="password">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <PasswordBox Grid.Column="0" x:Name="password_box" FontSize="16" VerticalAlignment="Stretch" Margin="2.5"/>
+                <TextBox Grid.Column="0" x:Name="password_cleartext_box" Visibility="Collapsed" FontSize="16" VerticalAlignment="Stretch" Margin="2.5"/>
+                <Button Grid.Column="1" x:Name="password_cleartext_switch" VerticalAlignment="Stretch" Margin="2.5" Content="abc"/>
+            </Grid>
+            <TextBox x:Name="RouterIP" TextWrapping="NoWrap" FontSize="16" VerticalAlignment="Bottom" Margin="2.5" MaxLines="1" IsUndoEnabled="True"/>
+            <TextBox x:Name="Domain" TextWrapping="NoWrap" FontSize="16" VerticalAlignment="Bottom" Margin="2.5" MaxLines="1" IsUndoEnabled="True"/>
+        </StackPanel>
     </Grid>
 </Window>

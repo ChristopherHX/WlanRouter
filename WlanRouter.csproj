@@ -97,11 +97,19 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IRouter.cs" />
+    <Compile Include="INetRouter.cs" />
     <Compile Include="IWlanRouter.cs" />
+    <Compile Include="IRouterDomain.cs" />
+    <Compile Include="IRouterScope.cs" />
+    <Compile Include="RoutingProvider.cs" />
     <Compile Include="NativeIcon.cs" />
     <Compile Include="WiFiDirect.cs" />
+    <Compile Include="NetworkOperatorTetheringManager.cs" />
     <Compile Include="NativeWiFi.cs" />
-    <Compile Include="Netzwerkshell.cs" />
+    <Compile Include="NetSh.cs" />
+    <Compile Include="NetCon.cs" />
+    <Compile Include="WlanRouterWrapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
     </Compile>

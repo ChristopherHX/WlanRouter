@@ -1,8 +1,4 @@
-public interface IWlanRouter
-{
+public interface IWlanRouter : IRouter {
     string SSID { get; set; }
     string Key { get; set; }
-    void Start();
-    bool IsRunning();
-    void Stop();
 }

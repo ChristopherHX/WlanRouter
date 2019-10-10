@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Windows.Devices.WiFiDirect;
 using Windows.Security.Credentials;
 public class WiFiDirect : IWlanRouter {
@@ -13,14 +14,6 @@ public class WiFiDirect : IWlanRouter {
         _publisher.Advertisement.LegacySettings.IsEnabled = true;
 
         _publisher.Advertisement.LegacySettings.Passphrase = new PasswordCredential();
-
-        try {
-            var nw = new NativeWiFi();
-            SSID = nw.SSID;
-            Key = nw.Key;
-        } catch {
-
-        }
     }
 
     public string SSID {
@@ -30,9 +23,8 @@ public class WiFiDirect : IWlanRouter {
 
     public string Key { get => _publisher.Advertisement.LegacySettings.Passphrase.Password ?? ""; set => _publisher.Advertisement.LegacySettings.Passphrase.Password = value; }
 
-    public void Start() {
-        if (!IsRunning())
-        {
+    public async Task Start() {
+        if (!IsRunning()) {
             _publisher.Start();
         }
     }
@@ -41,21 +33,13 @@ public class WiFiDirect : IWlanRouter {
         return _publisher.Status == WiFiDirectAdvertisementPublisherStatus.Started;
     }
 
-    public void Stop() {
-        if (IsRunning())
-        {
+    public async Task Stop() {
+        if (IsRunning()) {
             _publisher.Stop();
         }
     }
 
     ~WiFiDirect() {
         Stop();
-        try {
-            var nw = new NativeWiFi();
-            nw.SSID = SSID;
-            nw.Key = Key;
-        } catch {
-
-        }
     }
 }
